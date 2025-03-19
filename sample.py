@@ -6,31 +6,85 @@ from datetime import datetime
 from typing import *
 
 import aiohttp
+from psycopg2 import OperationalError
 
 import blivedm
 import blivedm.models.web as web_models
 import json
 from pathlib import Path
 
+import psycopg2
+
+from sql_const import *
+
 # 直播间ID的取值看直播间URL
 TEST_ROOM_IDS = [
-    22389206,#折原露露
-    27183290,#雪糕cheese
-    31835822,#萝尔露Real
-    7688602,#花花Haya
-    22816111,#东雪莲
-    21652717,#白神遥
-    22992234,#蕾尔娜Leona
+    # 7734200,#哔哩哔哩英雄联盟赛事
+    # 22603245,#永雏塔菲
+    # 22389206,#折原露露
+    # 27183290,#雪糕cheese
+    # 31835822,#萝尔露Real
+    # 7688602,#花花Haya
+    # 22816111,#东雪莲
+    # 21652717,#白神遥
+    # 22992234,#蕾尔娜Leona
+    80397,  #阿梓
 ]
 
 # 需要存入文件的字典
 danmu_dict = {}
 
+# 数据库相关
+# 填写你的数据库信息
+db_config = {
+    "host": "localhost",
+    "database": "postgres",
+    "user": "postgres",
+    "password": "Zhmz1996Zhmz",
+}
+# 连接到 PostgreSQL 数据库
+connection = psycopg2.connect(**db_config)
+# 创建一个游标对象
+cursor = connection.cursor()
+
+def table_exists(table_name, schema_name='public'):
+    full_table_name = f"{schema_name}.{table_name}"
+
+    try:
+        cursor.execute(exist_table_sql, (full_table_name,))
+        result = cursor.fetchone()
+        return result[0] if result else False
+    except OperationalError as e:
+        print(f"数据库连接失败: {e}")
+        return False
+
+
+# 创建danmu表
+if not table_exists("danmu_table"):
+    cursor.execute(create_danmu_table_sql)
+    print("danmu_table created successfully")
+if not table_exists("gift_table"):
+    cursor.execute(create_gift_table_sql)
+    print("gift_table created successfully")
+if not table_exists("buy_guard_table"):
+    cursor.execute(create_buy_guard_table_sql)
+    print("buy_guard_table created successfully")
+if not table_exists("user_toast_v2_table"):
+    cursor.execute(create_user_toast_v2_table_sql)
+    print("user_toast_v2_table created successfully")
+if not table_exists("super_chat_table"):
+    cursor.execute(create_super_chat_table_sql)
+    print("super_chat_table created successfully")
+if not table_exists("interact_word_table"):
+    cursor.execute(create_interact_word_table_sql)
+    print("interact_word_table created successfully")
+connection.commit()
 
 # 这里填一个已登录账号的cookie的SESSDATA字段的值。不填也可以连接，但是收到弹幕的用户名会打码，UID会变成0
-SESSDATA = '2726d111%2C1757406746%2Ca9e96%2A31CjDCbdBS3F4ouVfQVtpDA-gMErg6XzwDUzfmIZF3BxsrWc64whXOpmNTc363zO3BKzMSVno1OHlTZkFaejRaU2tfWEZpbVNVZkx6dGVyem1OemxTVXFWUUtGdUNIZ0FxNWJ3cDRyTVlhLUFIOTFMN1FQSmVoUDZxRnJKWU9HdUlOOEp6cllrdXpnIIEC'
+SESSDATA = '083c76f5%2C1757729855%2C7cf76%2A31CjD3YNx8j_PAbzwYAMeXhEzCy2f1zYBaD3DSafaUMZmA1bunwwgGM9xg4NwOpwgfFAoSVmVaNThIc2dHUjg0ekNuSWZMZEdjMUVKeWtMT1dwX2hwT1ZCc25qVVEzcEZLOEhFSEtNRm1IdThDZ3U4bEdhbHdwdTA4WmZEQWlDUEg5eWFvUFRCQjl3IIEC'
 
 session: Optional[aiohttp.ClientSession] = None
+
 
 
 async def main():
@@ -41,6 +95,7 @@ async def main():
         await run_multi_clients()
     finally:
         await session.close()
+    # TODO: 数据库关闭
 
 
 def init_session():
@@ -93,6 +148,22 @@ async def run_multi_clients():
         ))
 
 
+def init_database():
+    # 填写你的数据库信息
+    db_config = {
+        "host": "localhost",
+        "database": "postgres",
+        "user": "postgres",
+        "password": "Zhmz1996Zhmz",
+    }
+
+    # 连接到 PostgreSQL 数据库
+    connection = psycopg2.connect(**db_config)
+
+    # 创建一个游标对象
+    cursor = connection.cursor()
+
+
 # 初始化字典
 def init_danmu_dict():
     for room_id in TEST_ROOM_IDS:
@@ -109,14 +180,12 @@ class MyHandler(blivedm.BaseHandler):
     #     print(f'[{client.room_id}] WATCHED_CHANGE: {command}')
     # _CMD_CALLBACK_DICT['WATCHED_CHANGE'] = __watched_change_callback  # noqa
 
-
     # 计数器，达到阈值后写入一次文件
     danmu_instance_index = 0
     # 写入文件的阈值
     danmu_threshold = 100
 
     json_file_name = 'danmu.json'
-
 
     def save_danmu_to_json(self):
         try:
@@ -130,17 +199,54 @@ class MyHandler(blivedm.BaseHandler):
         print(f'[{client.room_id}] 心跳')
 
     def _on_danmaku(self, client: blivedm.BLiveClient, message: web_models.DanmakuMessage):
-        seconds = message.timestamp/1000
+        seconds = message.timestamp / 1000
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{dt}] {message.uname}：{message.msg}')
+
+        print(client.room_id,message.rnd,message.dm_type,message.uid,
+              message.uname,message.face,message.msg,message.vip,
+              message.svip,
+              message.privilege_type,
+              message.medal_level,
+              message.medal_name,
+              message.medal_room_id,
+              message.runame,
+              message.timestamp,
+              dt
+              )
+
+        params = {'room_id': client.room_id,
+                  'rnd': message.rnd,
+                  'dm_type': message.dm_type,
+                  'user_id': message.uid,
+                  'user_name': message.uname,
+                  'user_face': message.face,
+                  'message': message.msg,
+
+                  'vip': message.vip,
+                  'svip': message.svip,
+                  'privilege_type': message.privilege_type,
+                  'medal_level': message.medal_level,
+                  'medal_name': message.medal_name,
+                  'medal_room_id': message.medal_room_id,
+                  'medal_room_name': message.runame,
+
+                  'timestamp': message.timestamp,
+                  'datatime': dt
+                  }
+        # 执行语句
+        cursor.execute(insert_danmu_table_sql, params)
+        print("insert danmu successfully")
+        # 事务提交
+        connection.commit()
 
         if client.room_id in danmu_dict.keys():
             if "danmu" not in danmu_dict[client.room_id]:
                 danmu_dict[client.room_id]["danmu"] = list()
             temp_danmu = {}
             temp_danmu["datetime"] = dt
-            temp_danmu["username"] = message.uname
-            temp_danmu["msg"] = message.msg
+            temp_danmu["user_name"] = message.uname
+            temp_danmu["message"] = message.msg
             danmu_dict[client.room_id]["danmu"].append(temp_danmu)
             self.danmu_instance_index += 1
 
@@ -149,41 +255,243 @@ class MyHandler(blivedm.BaseHandler):
                 self.save_danmu_to_json()
 
     def _on_gift(self, client: blivedm.BLiveClient, message: web_models.GiftMessage):
-        seconds = message.timestamp/1000
+        seconds = message.timestamp / 1000
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{dt}] {message.uname} 赠送{message.gift_name}x{message.num}'
               f' （{message.coin_type}瓜子x{message.total_coin}）')
 
+        params = {'room_id': client.room_id,
+                  'rnd': message.rnd,
+                  'user_id': message.uid,
+                  'user_name': message.uname,
+                  'user_face': message.face,
+
+                  'gift_id': message.gift_id,
+                  'gift_type': message.gift_type,
+                  'gift_name': message.gift_name,
+                  'gift_img_basic': message.gift_img_basic,
+                  'gift_action': message.action,
+                  'gift_num': message.num,
+                  'gift_per_price': message.price,
+                  'coin_type': message.coin_type,
+                  'total_coin': message.total_coin,
+
+                  'privilege_type': message.guard_level,
+                  'medal_level': message.medal_level,
+                  'medal_name': message.medal_name,
+                  'medal_room_id': message.medal_room_id,
+                  'medal_room_uid': message.medal_ruid,
+
+                  'timestamp': message.timestamp,
+                  'datatime': dt
+                  }
+        # 执行语句
+        cursor.execute(insert_gift_table_sql, params)
+        print("insert gift successfully")
+        # 事务提交
+        connection.commit()
+
+        if client.room_id in danmu_dict.keys():
+            if "gift" not in danmu_dict[client.room_id]:
+                danmu_dict[client.room_id]["gift"] = list()
+            temp_gift = {}
+            temp_gift["datetime"] = dt
+            temp_gift["user_name"] = message.uname
+            temp_gift["gift_name"] = message.gift_name
+            temp_gift["gift_num"] = message.num
+            temp_gift["coin_type"] = message.coin_type
+            temp_gift["total_coin"] = message.total_coin
+            danmu_dict[client.room_id]["gift"].append(temp_gift)
+            self.danmu_instance_index += 1
+
+        if self.danmu_instance_index >= self.danmu_threshold:
+            self.danmu_instance_index = 0
+            self.save_danmu_to_json()
+
     def _on_buy_guard(self, client: blivedm.BLiveClient, message: web_models.GuardBuyMessage):
-        seconds = message.timestamp/1000
+        seconds = message.start_time / 1000
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{dt}] {message.username} 上舰，guard_level={message.guard_level}')
+
+        params = {'room_id': client.room_id,
+                  'user_id': message.uid,
+                  'user_name': message.username,
+                  'privilege_type': message.guard_level,
+
+                  'gift_id': message.gift_id,
+                  'gift_name': message.gift_name,
+                  'gift_num': message.num,
+                  'gift_per_price': message.price,
+
+                  'timestamp': message.start_time,
+                  'datatime': dt
+                  }
+        # 执行语句
+        cursor.execute(insert_buy_guard_table_sql, params)
+        print("insert buy_guard successfully")
+        # 事务提交
+        connection.commit()
+
+        if client.room_id in danmu_dict.keys():
+            if "buy_guard" not in danmu_dict[client.room_id]:
+                danmu_dict[client.room_id]["buy_guard"] = list()
+            temp_buy_guard = {}
+            temp_buy_guard["datetime"] = dt
+            temp_buy_guard["user_name"] = message.uname
+            temp_buy_guard["guard_level"] = message.guard_level
+            danmu_dict[client.room_id]["buy_guard"].append(temp_buy_guard)
+            self.danmu_instance_index += 1
+
+        if self.danmu_instance_index >= self.danmu_threshold:
+            self.danmu_instance_index = 0
+            self.save_danmu_to_json()
 
     def _on_user_toast_v2(self, client: blivedm.BLiveClient, message: web_models.UserToastV2Message):
-        seconds = message.start_time/1000
+        seconds = message.start_time / 1000
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{dt}] {message.username} 上舰，guard_level={message.guard_level}')
 
+        params = {'room_id': client.room_id,
+                  'user_id': message.uid,
+                  'user_name': message.username,
+                  'privilege_type': message.guard_level,
+
+                  'gift_id': message.gift_id,
+                  'gift_num': message.num,
+                  'gift_per_price': message.price,
+                  'gift_unit': message.unit,
+                  'source': message.source,
+                  'toast_msg': message.toast_msg,
+
+                  'timestamp': message.start_time,
+                  'datatime': dt
+                  }
+        # 执行语句
+        cursor.execute(insert_user_toast_v2_table_sql, params)
+        print("insert user_toast_v2 successfully")
+        # 事务提交
+        connection.commit()
+
+        if client.room_id in danmu_dict.keys():
+            if "user_toast_v2" not in danmu_dict[client.room_id]:
+                danmu_dict[client.room_id]["user_toast_v2"] = list()
+            temp_user_toast_v2 = {}
+            temp_user_toast_v2["datetime"] = dt
+            temp_user_toast_v2["user_name"] = message.username
+            temp_user_toast_v2["guard_level"] = message.guard_level
+            danmu_dict[client.room_id]["user_toast_v2"].append(temp_user_toast_v2)
+            self.danmu_instance_index += 1
+
+        if self.danmu_instance_index >= self.danmu_threshold:
+            self.danmu_instance_index = 0
+            self.save_danmu_to_json()
+
     def _on_super_chat(self, client: blivedm.BLiveClient, message: web_models.SuperChatMessage):
-        seconds = message.timestamp/1000
+        seconds = message.start_time / 1000
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{dt}] 醒目留言 ¥{message.price} {message.uname}：{message.message}')
 
-    # def _on_interact_word(self, client: blivedm.BLiveClient, message: web_models.InteractWordMessage):
-    #     seconds = message.timestamp/1000
-    #     dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
-    #     if message.msg_type == 1:
-    #         print(f'[{client.room_id}] [{dt}] {message.username} 进入房间')
-    #     elif message.msg_type == 2:
-    #         print(f'[{client.room_id}] [{dt}] {message.username} 关注了主播')
-    #     elif message.msg_type == 3:
-    #         print(f'[{client.room_id}] [{dt}] {message.username} 分享了房间')
-    #     elif message.msg_type == 4:
-    #         print(f'[{client.room_id}] [{dt}] {message.username} 特别关注了主播')
-    #     elif message.msg_type == 5:
-    #         print(f'[{client.room_id}] [{dt}] {message.username} 与主播互粉了')
-    #     elif message.msg_type == 6:
-    #         print(f'[{client.room_id}] [{dt}] {message.username} 为主播点赞了')
+        params = {'room_id': client.room_id,
+                  'user_id': message.uid,
+                  'user_name': message.uname,
+                  'user_face': message.face,
+                  'user_level': message.user_level,
+                  'privilege_type': message.guard_level,
+
+                  'super_chat_id': message.id,
+                  'price': message.price,
+                  'super_chat_msg': message.message,
+                  'available_timestamp': message.time,
+                  'gift_id': message.gift_id,
+                  'gift_name': message.gift_name,
+
+                  'medal_level': message.medal_level,
+                  'medal_name': message.medal_name,
+                  'medal_room_id': message.medal_room_id,
+                  'medal_room_uid': message.medal_ruid,
+
+                  'start_timestamp': message.start_time,
+                  'end_timestamp': message.end_time,
+                  'datatime': dt
+                  }
+        # 执行语句
+        cursor.execute(insert_super_chat_table_sql, params)
+        print("insert super_chat successfully")
+        # 事务提交
+        connection.commit()
+
+        if client.room_id in danmu_dict.keys():
+            if "super_chat" not in danmu_dict[client.room_id]:
+                danmu_dict[client.room_id]["super_chat"] = list()
+            temp_super_chat = {}
+            temp_super_chat["datetime"] = dt
+            temp_super_chat["user_name"] = message.uname
+            temp_super_chat["price"] = message.price
+            temp_super_chat["message"] = message.guard_level
+            danmu_dict[client.room_id]["super_chat"].append(temp_super_chat)
+            self.danmu_instance_index += 1
+
+        if self.danmu_instance_index >= self.danmu_threshold:
+            self.danmu_instance_index = 0
+            self.save_danmu_to_json()
+
+    def _on_interact_word(self, client: blivedm.BLiveClient, message: web_models.InteractWordMessage):
+        seconds = message.timestamp / 1000
+        dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
+
+        temp_interact_word = {}
+
+        # if message.msg_type == 1:
+        #     # 这个太多了，先屏蔽一下
+        #     print(f'[{client.room_id}] [{dt}] {message.username} 进入房间')
+        if message.msg_type == 2:
+            print(f'[{client.room_id}] [{dt}] {message.username} 关注了主播')
+            temp_interact_word["action"] = "关注了主播"
+        elif message.msg_type == 3:
+            print(f'[{client.room_id}] [{dt}] {message.username} 分享了房间')
+            temp_interact_word["action"] = "分享了房间"
+        elif message.msg_type == 4:
+            print(f'[{client.room_id}] [{dt}] {message.username} 特别关注了主播')
+            temp_interact_word["action"] = "特别关注了主播"
+        elif message.msg_type == 5:
+            print(f'[{client.room_id}] [{dt}] {message.username} 与主播互粉了')
+            temp_interact_word["action"] = "与主播互粉了"
+        elif message.msg_type == 6:
+            print(f'[{client.room_id}] [{dt}] {message.username} 为主播点赞了')
+            temp_interact_word["action"] = "为主播点赞了"
+
+        # 进入房间，这个不打印
+        if message.msg_type != 1:
+            params = {'room_id': client.room_id,
+                      'user_id': message.uid,
+                      'user_name': message.username,
+                      'user_face': message.face,
+
+                      'msg_type': message.msg_type,
+                      'msg_text': temp_interact_word["action"],
+
+                      'timestamp': message.timestamp,
+                      'datatime': dt
+                      }
+            # 执行语句
+            cursor.execute(insert_interact_word_table_sql, params)
+            print("insert interact_word successfully")
+            # 事务提交
+            connection.commit()
+
+        if client.room_id in danmu_dict.keys():
+            if "interact_word" not in danmu_dict[client.room_id]:
+                danmu_dict[client.room_id]["interact_word"] = list()
+            # 进入房间不打印
+            if message.msg_type != 1:
+                temp_interact_word["datetime"] = dt
+                temp_interact_word["user_name"] = message.username
+                danmu_dict[client.room_id]["interact_word"].append(temp_interact_word)
+                self.danmu_instance_index += 1
+
+        if self.danmu_instance_index >= self.danmu_threshold:
+            self.danmu_instance_index = 0
+            self.save_danmu_to_json()
 
 
 if __name__ == '__main__':

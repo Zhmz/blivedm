@@ -63,7 +63,7 @@ class DanmakuMessage:
     msg: str = ''
     """弹幕内容"""
 
-    uid: int = 0
+    uid: str = ''
     """用户ID"""
     uname: str = ''
     """用户名"""
@@ -266,7 +266,7 @@ class GiftMessage:
     """用户头像URL"""
     guard_level: int = 0
     """舰队等级，0非舰队，1总督，2提督，3舰长"""
-    uid: int = 0
+    uid: str = ''
     """用户ID"""
     timestamp: int = 0
     """时间戳"""
@@ -341,7 +341,7 @@ class GuardBuyMessage:
     上舰消息
     """
 
-    uid: int = 0
+    uid: str = ''
     """用户ID"""
     username: str = ''
     """用户名"""
@@ -381,7 +381,7 @@ class UserToastV2Message:
     另一个上舰消息，包含的数据更多
     """
 
-    uid: int = 0
+    uid: str = ''
     """用户ID"""
     username: str = ''
     """用户名"""
@@ -450,7 +450,7 @@ class SuperChatMessage:
     """礼物ID"""
     gift_name: str = ''
     """礼物名"""
-    uid: int = 0
+    uid: str = ''
     """用户ID"""
     uname: str = ''
     """用户名"""
@@ -542,7 +542,7 @@ class InteractWordMessage:
     进入房间、关注主播等互动消息
     """
 
-    uid: int = 0
+    uid: str = ''
     """用户ID"""
     username: str = ''
     """用户名"""
