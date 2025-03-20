@@ -18,8 +18,8 @@ connection = psycopg2.connect(**db_config)
 cursor = connection.cursor()
 
 #sql语句，建表
-sql ="""select * from gift_table"""
-#sql ="""DROP table danmu_table,gift_table,buy_guard_table,user_toast_v2_table,super_chat_table,interact_word_table"""
+#sql ="""select * from gift_table"""
+sql ="""DROP table danmu_table,gift_table,buy_guard_table,user_toast_v2_table,super_chat_table,interact_word_table"""
 #danmu_table,gift_table,buy_guard_table,user_toast_v2_table,super_chat_table,interact_word_table
 
 #sql = exist_table_sql
@@ -29,11 +29,11 @@ sql ="""select * from gift_table"""
 # 执行语句
 cursor.execute(sql)
 
-rows = cursor.fetchall()
-print(rows)
-
-count = cursor.rowcount
-print(count)
+# rows = cursor.fetchall()
+# print(rows)
+# 
+# count = cursor.rowcount
+# print(count)
 
 
 # 事务提交

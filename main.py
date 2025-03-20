@@ -273,7 +273,7 @@ class MyHandler(blivedm.BaseHandler):
                   'medal_room_id': message.medal_room_id,
                   'medal_room_uid': message.medal_ruid,
 
-                  'timestamp': message.timestamp,
+                  'timestamp': message.timestamp*1000,#改为毫秒存入数据库
                   'datatime': dt
                   }
 
@@ -292,7 +292,7 @@ class MyHandler(blivedm.BaseHandler):
     def _on_buy_guard(self, client: blivedm.BLiveClient, message: web_models.GuardBuyMessage):
         seconds = message.start_time / 1000
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
-        print(f'[{client.room_id}] [{dt}] {message.username} 上舰，guard_level={message.guard_level}')
+        print(f'[{client.room_id}] [{dt}] {message.username} 上舰，guard_level={message.guard_level}，timestamp = {message.start_time}')
 
         params = {'room_id': client.room_id,
                   'user_id': message.uid,
@@ -323,7 +323,7 @@ class MyHandler(blivedm.BaseHandler):
     def _on_user_toast_v2(self, client: blivedm.BLiveClient, message: web_models.UserToastV2Message):
         seconds = message.start_time / 1000
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
-        print(f'[{client.room_id}] [{dt}] {message.username} 上舰，guard_level={message.guard_level}')
+        print(f'[{client.room_id}] [{dt}] {message.username} 上舰，guard_level={message.guard_level}，timestamp = {message.start_time}')
 
         params = {'room_id': client.room_id,
                   'user_id': message.uid,
@@ -356,7 +356,7 @@ class MyHandler(blivedm.BaseHandler):
     def _on_super_chat(self, client: blivedm.BLiveClient, message: web_models.SuperChatMessage):
         seconds = message.start_time / 1000
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
-        print(f'[{client.room_id}] [{dt}] 醒目留言 ¥{message.price} {message.uname}：{message.message}')
+        print(f'[{client.room_id}] [{dt}] 醒目留言 ¥{message.price} {message.uname}：{message.message}，timestamp = {message.start_time}')
 
         params = {'room_id': client.room_id,
                   'user_id': message.uid,
@@ -404,19 +404,19 @@ class MyHandler(blivedm.BaseHandler):
         #     # 这个太多了，先屏蔽一下
         #     print(f'[{client.room_id}] [{dt}] {message.username} 进入房间')
         if message.msg_type == 2:
-            print(f'[{client.room_id}] [{dt}] {message.username} 关注了主播')
+            print(f'[{client.room_id}] [{dt}] {message.username} 关注了主播，timestamp = {message.timestamp}')
             temp_interact_word["action"] = "关注了主播"
         elif message.msg_type == 3:
-            print(f'[{client.room_id}] [{dt}] {message.username} 分享了房间')
+            print(f'[{client.room_id}] [{dt}] {message.username} 分享了房间，timestamp = {message.timestamp}')
             temp_interact_word["action"] = "分享了房间"
         elif message.msg_type == 4:
-            print(f'[{client.room_id}] [{dt}] {message.username} 特别关注了主播')
+            print(f'[{client.room_id}] [{dt}] {message.username} 特别关注了主播，timestamp = {message.timestamp}')
             temp_interact_word["action"] = "特别关注了主播"
         elif message.msg_type == 5:
-            print(f'[{client.room_id}] [{dt}] {message.username} 与主播互粉了')
+            print(f'[{client.room_id}] [{dt}] {message.username} 与主播互粉了，timestamp = {message.timestamp}')
             temp_interact_word["action"] = "与主播互粉了"
         elif message.msg_type == 6:
-            print(f'[{client.room_id}] [{dt}] {message.username} 为主播点赞了')
+            print(f'[{client.room_id}] [{dt}] {message.username} 为主播点赞了，timestamp = {message.timestamp}')
             temp_interact_word["action"] = "为主播点赞了"
 
         # 进入房间，这个不打印

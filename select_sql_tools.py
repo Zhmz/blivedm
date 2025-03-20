@@ -80,9 +80,9 @@ if __name__ == "__main__":
     # 礼物
     data,data_count = query_gift_by_room_and_timespan(
         conn_params=db_config,
-        room_id="22603245",
-        start_ts=1742455800000,
-        end_ts=1742460900000
+        room_id="30762538",
+        start_ts=1742464800000,
+        end_ts=1742467800000
     )
 
 
