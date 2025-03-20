@@ -21,20 +21,17 @@ from sql_const import *
 # 直播间ID的取值看直播间URL
 TEST_ROOM_IDS = [
     # 7734200,#哔哩哔哩英雄联盟赛事
-    # 22603245,#永雏塔菲
+    22603245,#永雏塔菲
     # 22389206,#折原露露
     # 27183290,#雪糕cheese
     # 31835822,#萝尔露Real
-    7688602,#花花Haya
+    # 7688602,#花花Haya
     # 22816111,#东雪莲
     # 21652717,#白神遥
     # 22992234,#蕾尔娜Leona
-    # 80397,#阿梓
-    22333522,#伊万
+    80397,#阿梓
+    # 22333522,#伊万
 ]
-
-# 需要存入文件的字典
-danmu_dict = {}
 
 # 数据库相关
 # 填写你的数据库信息
@@ -51,7 +48,6 @@ cursor = connection.cursor()
 
 def table_exists(table_name, schema_name='public'):
     full_table_name = f"{schema_name}.{table_name}"
-
     try:
         cursor.execute(exist_table_sql, (full_table_name,))
         result = cursor.fetchone()
@@ -59,7 +55,6 @@ def table_exists(table_name, schema_name='public'):
     except OperationalError as e:
         print(f"数据库连接失败: {e}")
         return False
-
 
 # 创建danmu表
 if not table_exists("danmu_table"):
@@ -87,10 +82,7 @@ SESSDATA = '860abe6c%2C1757991352%2C6ab50%2A31CjBB6BCoJjckpe20ZeNG5Nf4kpLJ7WsN1i
 
 session: Optional[aiohttp.ClientSession] = None
 
-
-
 async def main():
-    init_danmu_dict()
     init_session()
     try:
         await run_single_client()
@@ -150,29 +142,6 @@ async def run_multi_clients():
         ))
 
 
-def init_database():
-    # 填写你的数据库信息
-    db_config = {
-        "host": "localhost",
-        "database": "postgres",
-        "user": "postgres",
-        "password": "Zhmz1996Zhmz",
-    }
-
-    # 连接到 PostgreSQL 数据库
-    connection = psycopg2.connect(**db_config)
-
-    # 创建一个游标对象
-    cursor = connection.cursor()
-
-
-# 初始化字典
-def init_danmu_dict():
-    for room_id in TEST_ROOM_IDS:
-        if room_id not in danmu_dict:
-            danmu_dict[room_id] = {}
-
-
 class MyHandler(blivedm.BaseHandler):
     # # 演示如何添加自定义回调
     # _CMD_CALLBACK_DICT = blivedm.BaseHandler._CMD_CALLBACK_DICT.copy()
@@ -181,14 +150,6 @@ class MyHandler(blivedm.BaseHandler):
     # def __watched_change_callback(self, client: blivedm.BLiveClient, command: dict):
     #     print(f'[{client.room_id}] WATCHED_CHANGE: {command}')
     # _CMD_CALLBACK_DICT['WATCHED_CHANGE'] = __watched_change_callback  # noqa
-
-    # 计数器，达到阈值后写入一次文件
-    json_instance_index = 0
-    # 写入文件的阈值
-    json_threshold = 100
-
-    json_file_name = 'danmu.json'
-
 
     # db存入计数器
     danmu_db_index = 0
@@ -219,15 +180,7 @@ class MyHandler(blivedm.BaseHandler):
     super_chat_commit_pool = []
     interact_word_pool = []
     interact_word_commit_pool = []
-    
 
-    def save_danmu_to_json(self):
-        try:
-            with Path(self.json_file_name).open("w", encoding="utf-8") as f:
-                json.dump(danmu_dict, f, ensure_ascii=False, indent=4)
-            print(f"数据已保存至 {self.json_file_name}")
-        except (IOError, TypeError) as e:
-            print(f"保存失败：{str(e)}")
 
     def _on_heartbeat(self, client: blivedm.BLiveClient, message: web_models.HeartbeatMessage):
         print(f'[{client.room_id}] 心跳')
@@ -237,17 +190,6 @@ class MyHandler(blivedm.BaseHandler):
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{dt}] {message.uname}：{message.msg}')
 
-        # print(client.room_id,message.rnd,message.dm_type,message.uid,
-        #       message.uname,message.face,message.msg,message.vip,
-        #       message.svip,
-        #       message.privilege_type,
-        #       message.medal_level,
-        #       message.medal_name,
-        #       message.medal_room_id,
-        #       message.runame,
-        #       message.timestamp,
-        #       dt
-        #       )
 
         params = {'room_id': client.room_id,
                   'rnd': message.rnd,
@@ -281,27 +223,6 @@ class MyHandler(blivedm.BaseHandler):
             cursor.executemany(insert_danmu_table_sql, self.danmu_commit_pool)
             connection.commit()
 
-
-        # # 执行语句
-        # cursor.execute(insert_danmu_table_sql, params)
-        # print("insert danmu successfully")
-        # # 事务提交
-        # connection.commit()
-
-        if client.room_id in danmu_dict.keys():
-            if "danmu" not in danmu_dict[client.room_id]:
-                danmu_dict[client.room_id]["danmu"] = list()
-            temp_danmu = {}
-            temp_danmu["datetime"] = dt
-            temp_danmu["user_name"] = message.uname
-            temp_danmu["message"] = message.msg
-            danmu_dict[client.room_id]["danmu"].append(temp_danmu)
-            self.json_instance_index += 1
-
-            if self.json_instance_index >= self.json_threshold:
-                self.json_instance_index = 0
-                self.save_danmu_to_json()
-
     def _on_gift(self, client: blivedm.BLiveClient, message: web_models.GiftMessage):
         seconds = message.timestamp / 1000
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
@@ -333,7 +254,7 @@ class MyHandler(blivedm.BaseHandler):
                   'timestamp': message.timestamp,
                   'datatime': dt
                   }
-        
+
         # 存入对象池
         self.gift_pool.append(params)
         self.gift_db_index += 1
@@ -345,29 +266,6 @@ class MyHandler(blivedm.BaseHandler):
             self.gift_db_index = 0
             cursor.executemany(insert_gift_table_sql, self.gift_commit_pool)
             connection.commit()
-        
-        # # 执行语句
-        # cursor.execute(insert_gift_table_sql, params)
-        # print("insert gift successfully")
-        # # 事务提交
-        # connection.commit()
-
-        if client.room_id in danmu_dict.keys():
-            if "gift" not in danmu_dict[client.room_id]:
-                danmu_dict[client.room_id]["gift"] = list()
-            temp_gift = {}
-            temp_gift["datetime"] = dt
-            temp_gift["user_name"] = message.uname
-            temp_gift["gift_name"] = message.gift_name
-            temp_gift["gift_num"] = message.num
-            temp_gift["coin_type"] = message.coin_type
-            temp_gift["total_coin"] = message.total_coin
-            danmu_dict[client.room_id]["gift"].append(temp_gift)
-            self.json_instance_index += 1
-
-        if self.json_instance_index >= self.json_threshold:
-            self.json_instance_index = 0
-            self.save_danmu_to_json()
 
     def _on_buy_guard(self, client: blivedm.BLiveClient, message: web_models.GuardBuyMessage):
         seconds = message.start_time / 1000
@@ -387,7 +285,7 @@ class MyHandler(blivedm.BaseHandler):
                   'timestamp': message.start_time,
                   'datatime': dt
                   }
-        
+
         # 存入对象池
         self.buy_guard_pool.append(params)
         self.buy_guard_db_index += 1
@@ -399,26 +297,6 @@ class MyHandler(blivedm.BaseHandler):
             self.buy_guard_db_index = 0
             cursor.executemany(insert_buy_guard_table_sql, self.buy_guard_commit_pool)
             connection.commit()
-        
-        # # 执行语句
-        # cursor.execute(insert_buy_guard_table_sql, params)
-        # print("insert buy_guard successfully")
-        # # 事务提交
-        # connection.commit()
-
-        if client.room_id in danmu_dict.keys():
-            if "buy_guard" not in danmu_dict[client.room_id]:
-                danmu_dict[client.room_id]["buy_guard"] = list()
-            temp_buy_guard = {}
-            temp_buy_guard["datetime"] = dt
-            temp_buy_guard["user_name"] = message.username
-            temp_buy_guard["guard_level"] = message.guard_level
-            danmu_dict[client.room_id]["buy_guard"].append(temp_buy_guard)
-            self.json_instance_index += 1
-
-        if self.json_instance_index >= self.json_threshold:
-            self.json_instance_index = 0
-            self.save_danmu_to_json()
 
     def _on_user_toast_v2(self, client: blivedm.BLiveClient, message: web_models.UserToastV2Message):
         seconds = message.start_time / 1000
@@ -452,26 +330,6 @@ class MyHandler(blivedm.BaseHandler):
             self.user_toast_v2_db_index = 0
             cursor.executemany(insert_user_toast_v2_table_sql, self.user_toast_v2_commit_pool)
             connection.commit()
-        
-        # # 执行语句
-        # cursor.execute(insert_user_toast_v2_table_sql, params)
-        # print("insert user_toast_v2 successfully")
-        # # 事务提交
-        # connection.commit()
-
-        if client.room_id in danmu_dict.keys():
-            if "user_toast_v2" not in danmu_dict[client.room_id]:
-                danmu_dict[client.room_id]["user_toast_v2"] = list()
-            temp_user_toast_v2 = {}
-            temp_user_toast_v2["datetime"] = dt
-            temp_user_toast_v2["user_name"] = message.username
-            temp_user_toast_v2["guard_level"] = message.guard_level
-            danmu_dict[client.room_id]["user_toast_v2"].append(temp_user_toast_v2)
-            self.json_instance_index += 1
-
-        if self.json_instance_index >= self.json_threshold:
-            self.json_instance_index = 0
-            self.save_danmu_to_json()
 
     def _on_super_chat(self, client: blivedm.BLiveClient, message: web_models.SuperChatMessage):
         seconds = message.start_time / 1000
@@ -513,27 +371,6 @@ class MyHandler(blivedm.BaseHandler):
             self.super_chat_db_index = 0
             cursor.executemany(insert_super_chat_table_sql, self.super_chat_commit_pool)
             connection.commit()
-        
-        # # 执行语句
-        # cursor.execute(insert_super_chat_table_sql, params)
-        # print("insert super_chat successfully")
-        # # 事务提交
-        # connection.commit()
-
-        if client.room_id in danmu_dict.keys():
-            if "super_chat" not in danmu_dict[client.room_id]:
-                danmu_dict[client.room_id]["super_chat"] = list()
-            temp_super_chat = {}
-            temp_super_chat["datetime"] = dt
-            temp_super_chat["user_name"] = message.uname
-            temp_super_chat["price"] = message.price
-            temp_super_chat["message"] = message.guard_level
-            danmu_dict[client.room_id]["super_chat"].append(temp_super_chat)
-            self.json_instance_index += 1
-
-        if self.json_instance_index >= self.json_threshold:
-            self.json_instance_index = 0
-            self.save_danmu_to_json()
 
     def _on_interact_word(self, client: blivedm.BLiveClient, message: web_models.InteractWordMessage):
         seconds = message.timestamp / 1000
@@ -580,33 +417,11 @@ class MyHandler(blivedm.BaseHandler):
             if self.interact_word_db_index >= self.interact_word_db_threshold:
                 self.interact_word_commit_pool = copy.deepcopy(self.interact_word_pool)
                 self.interact_word_pool = []
-    
+
                 print("insert interact_word successfully,count = "+str(self.interact_word_db_index)+", pool count = "+str(len(self.interact_word_commit_pool)))
                 self.interact_word_db_index = 0
                 cursor.executemany(insert_interact_word_table_sql, self.interact_word_commit_pool)
                 connection.commit()
-
-
-            # # 执行语句
-            # cursor.execute(insert_interact_word_table_sql, params)
-            # print("insert interact_word successfully")
-            # # 事务提交
-            # connection.commit()
-
-        if client.room_id in danmu_dict.keys():
-            if "interact_word" not in danmu_dict[client.room_id]:
-                danmu_dict[client.room_id]["interact_word"] = list()
-            # 进入房间不打印
-            if message.msg_type != 1:
-                temp_interact_word["datetime"] = dt
-                temp_interact_word["user_name"] = message.username
-                danmu_dict[client.room_id]["interact_word"].append(temp_interact_word)
-                self.json_instance_index += 1
-
-        if self.json_instance_index >= self.json_threshold:
-            self.json_instance_index = 0
-            self.save_danmu_to_json()
-
 
 if __name__ == '__main__':
     asyncio.run(main())

@@ -15,4 +15,4 @@ Python获取bilibili直播弹幕的库，使用WebSocket协议，支持web端和
     pip install -r requirements.txt
     ```
 
-3. web端例程在[sample.py](./sample.py)，B站直播开放平台例程在[open_live_sample.py](./open_live_sample.py)
+3. web端例程在[sample.py](./main.py)，B站直播开放平台例程在[open_live_sample.py](./open_live_sample.py)

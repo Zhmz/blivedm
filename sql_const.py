@@ -75,7 +75,7 @@ create_gift_table_sql = """CREATE TABLE gift_table (
 id serial4 PRIMARY KEY,
 
 room_id varchar(10),
-rnd bigint,
+rnd text,
 user_id text,
 user_name varchar(100),
 user_face text,
@@ -370,5 +370,20 @@ datatime
 %(timestamp)s,
 %(datatime)s
 );"""
+
+
+select_danmu_table_sql = """SELECT * FROM danmu_table
+WHERE room_id = '22603245' AND timestamp >= 1742456400000 AND timestamp <= 1742456700000
+;"""
+
+
+
+
+
+
+
+
+
+
 
 
