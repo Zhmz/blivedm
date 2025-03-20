@@ -94,7 +94,7 @@ privilege_type int,
 medal_level int,
 medal_name text,
 medal_room_id bigint,
-medal_room_uid int,
+medal_room_uid bigint,
 
 timestamp bigint,
 datatime timestamp

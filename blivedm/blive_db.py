@@ -18,7 +18,7 @@ connection = psycopg2.connect(**db_config)
 cursor = connection.cursor()
 
 #sql语句，建表
-sql ="""select * from danmu_table"""
+sql ="""select * from gift_table"""
 #sql ="""DROP table danmu_table,gift_table,buy_guard_table,user_toast_v2_table,super_chat_table,interact_word_table"""
 #danmu_table,gift_table,buy_guard_table,user_toast_v2_table,super_chat_table,interact_word_table
 
@@ -27,7 +27,7 @@ sql ="""select * from danmu_table"""
 # 动态生成 SQL
 
 # 执行语句
-cursor.execute(select_danmu_table_sql)
+cursor.execute(sql)
 
 rows = cursor.fetchall()
 print(rows)

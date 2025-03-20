@@ -21,9 +21,9 @@ from sql_const import *
 # 直播间ID的取值看直播间URL
 TEST_ROOM_IDS = [
     # 7734200,#哔哩哔哩英雄联盟赛事
-    22603245,#永雏塔菲
+    # 22603245,#永雏塔菲
     # 22389206,#折原露露
-    # 27183290,#雪糕cheese
+    27183290,#雪糕cheese
     # 31835822,#萝尔露Real
     # 7688602,#花花Haya
     # 22816111,#东雪莲
@@ -31,6 +31,7 @@ TEST_ROOM_IDS = [
     # 22992234,#蕾尔娜Leona
     80397,#阿梓
     # 22333522,#伊万
+    30762538,#雨中neo
 ]
 
 # 数据库相关
@@ -161,11 +162,11 @@ class MyHandler(blivedm.BaseHandler):
 
     # 写入数据库的池子的阈值
     danmu_db_threshold = 10
-    gift_db_threshold = 10
-    buy_guard_db_threshold = 10
-    user_toast_v2_db_threshold = 10
-    super_chat_db_threshold = 10
-    interact_word_db_threshold = 10
+    gift_db_threshold = 1#同时插入3条，会出现超过整数范围
+    buy_guard_db_threshold = 1
+    user_toast_v2_db_threshold = 1
+    super_chat_db_threshold = 1
+    interact_word_db_threshold = 3
 
     # db数据对象池
     danmu_pool = []
@@ -224,10 +225,31 @@ class MyHandler(blivedm.BaseHandler):
             connection.commit()
 
     def _on_gift(self, client: blivedm.BLiveClient, message: web_models.GiftMessage):
-        seconds = message.timestamp / 1000
+        # gift的时间戳是秒
+        seconds = message.timestamp
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{dt}] {message.uname} 赠送{message.gift_name}x{message.num}'
-              f' （{message.coin_type}瓜子x{message.total_coin}）')
+              f' （{message.coin_type}瓜子x{message.total_coin}），timestamp = {message.timestamp}')
+
+        print(client.room_id,message.rnd,message.uid,
+              message.uname,message.face,message.gift_id,
+              message.gift_type,
+              message.gift_name,
+              message.action,
+              message.num,
+              message.price,
+              message.coin_type,
+              message.total_coin,
+              message.guard_level,
+              message.medal_level,
+              message.medal_name,
+              message.medal_room_id,
+              message.medal_ruid,
+
+              message.timestamp,
+              dt
+              )
+
 
         params = {'room_id': client.room_id,
                   'rnd': message.rnd,
