@@ -11,6 +11,7 @@ from psycopg2 import OperationalError
 
 import blivedm
 import blivedm.models.web as web_models
+import blivedm.models.open_live as open_models
 import json
 from pathlib import Path
 
@@ -20,18 +21,22 @@ from sql_const import *
 
 # 直播间ID的取值看直播间URL
 TEST_ROOM_IDS = [
-    # 7734200,#哔哩哔哩英雄联盟赛事
-    # 22603245,#永雏塔菲
-    # 22389206,#折原露露
+    7734200,#哔哩哔哩英雄联盟赛事
+    22603245,#永雏塔菲
+    22389206,#折原露露
     27183290,#雪糕cheese
-    # 31835822,#萝尔露Real
-    # 7688602,#花花Haya
-    # 22816111,#东雪莲
-    # 21652717,#白神遥
-    # 22992234,#蕾尔娜Leona
+    31835822,#萝尔露Real
+    7688602,#花花Haya
+    22816111,#东雪莲
+    21652717,#白神遥
+    22992234,#蕾尔娜Leona
     80397,#阿梓
-    # 22333522,#伊万
+    22333522,#伊万
+    22625027,#乃琳
+
     30762538,#雨中neo
+    32378653,#星光Kirarin
+    13878454,#夜车Azuya
 ]
 
 # 数据库相关
@@ -162,7 +167,7 @@ class MyHandler(blivedm.BaseHandler):
 
     # 写入数据库的池子的阈值
     danmu_db_threshold = 10
-    gift_db_threshold = 1#同时插入3条，会出现超过整数范围
+    gift_db_threshold = 3#同时插入3条，会出现超过整数范围
     buy_guard_db_threshold = 1
     user_toast_v2_db_threshold = 1
     super_chat_db_threshold = 1
@@ -304,7 +309,7 @@ class MyHandler(blivedm.BaseHandler):
                   'gift_num': message.num,
                   'gift_per_price': message.price,
 
-                  'timestamp': message.start_time,
+                  'timestamp': message.start_time*1000,
                   'datatime': dt
                   }
 
@@ -337,7 +342,7 @@ class MyHandler(blivedm.BaseHandler):
                   'source': message.source,
                   'toast_msg': message.toast_msg,
 
-                  'timestamp': message.start_time,
+                  'timestamp': message.start_time*1000,
                   'datatime': dt
                   }
 
@@ -377,8 +382,8 @@ class MyHandler(blivedm.BaseHandler):
                   'medal_room_id': message.medal_room_id,
                   'medal_room_uid': message.medal_ruid,
 
-                  'start_timestamp': message.start_time,
-                  'end_timestamp': message.end_time,
+                  'start_timestamp': message.start_time*1000,
+                  'end_timestamp': message.end_time*1000,
                   'datatime': dt
                   }
 
@@ -429,7 +434,7 @@ class MyHandler(blivedm.BaseHandler):
                       'msg_type': message.msg_type,
                       'msg_text': temp_interact_word["action"],
 
-                      'timestamp': message.timestamp,
+                      'timestamp': message.timestamp*1000,
                       'datatime': dt
                       }
 
@@ -444,6 +449,12 @@ class MyHandler(blivedm.BaseHandler):
                 self.interact_word_db_index = 0
                 cursor.executemany(insert_interact_word_table_sql, self.interact_word_commit_pool)
                 connection.commit()
+
+    def _on_open_live_start_live(self, client: blivedm.OpenLiveClient, message: open_models.LiveStartMessage):
+        print(f'[{message.room_id}] 开始直播')
+
+    def _on_open_live_end_live(self, client: blivedm.OpenLiveClient, message: open_models.LiveEndMessage):
+        print(f'[{message.room_id}] 结束直播')
 
 if __name__ == '__main__':
     asyncio.run(main())
