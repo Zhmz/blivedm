@@ -23,6 +23,7 @@ logged_unknown_cmds = {
     'ONLINE_RANK_COUNT',
     'ONLINE_RANK_TOP3',
     'ONLINE_RANK_V2',
+    'LIKE_INFO_V3_CLICK',#点赞消息
     'PK_BATTLE_END',
     'PK_BATTLE_FINAL_PROCESS',
     'PK_BATTLE_PROCESS',
@@ -85,6 +86,8 @@ class BaseHandler(HandlerInterface):
         'DANMU_MSG': __danmu_msg_callback,
         # 礼物
         'SEND_GIFT': _make_msg_callback('_on_gift', web_models.GiftMessage),
+        # 礼物连击
+        'COMBO_SEND': _make_msg_callback('_on_combo_send', web_models.ComboSendMessage),
         # 上舰
         'GUARD_BUY': _make_msg_callback('_on_buy_guard', web_models.GuardBuyMessage),
         # 另一个上舰消息
@@ -95,6 +98,17 @@ class BaseHandler(HandlerInterface):
         'SUPER_CHAT_MESSAGE_DELETE': _make_msg_callback('_on_super_chat_delete', web_models.SuperChatDeleteMessage),
         # 进入房间、关注主播等互动消息
         'INTERACT_WORD': _make_msg_callback('_on_interact_word', web_models.InteractWordMessage),
+
+        # 看过人数
+        'WATCHED_CHANGE': _make_msg_callback('_on_watch_change', web_models.WatchChangeMessage),
+        # 点赞人数
+        'LIKE_INFO_V3_UPDATE': _make_msg_callback('_on_like_info_update', web_models.LikeInfoUpdateMessage),
+
+        # 开始直播
+        'LIVE': _make_msg_callback('_on_start_live', web_models.StartLiveMessage),
+
+        # 高能榜人数（付费榜人数）
+        'ONLINE_RANK_COUNT': _make_msg_callback('_on_online_rank_count', web_models.OnlineRankCountMessage),
 
         #
         # 开放平台消息
@@ -148,6 +162,9 @@ class BaseHandler(HandlerInterface):
     def _on_gift(self, client: ws_base.WebSocketClientBase, message: web_models.GiftMessage):
         """礼物"""
 
+    def _on_combo_send(self, client: ws_base.WebSocketClientBase, message: web_models.ComboSendMessage):
+        """礼物连击"""
+
     def _on_buy_guard(self, client: ws_base.WebSocketClientBase, message: web_models.GuardBuyMessage):
         """上舰"""
 
@@ -162,6 +179,19 @@ class BaseHandler(HandlerInterface):
 
     def _on_interact_word(self, client: ws_base.WebSocketClientBase, message: web_models.InteractWordMessage):
         """进入房间、关注主播等互动消息"""
+
+    def _on_watch_change(self, client: ws_base.WebSocketClientBase, message: web_models.WatchChangeMessage):
+        """xxx人看过"""
+
+    def _on_like_info_update(self, client: ws_base.WebSocketClientBase, message: web_models.LikeInfoUpdateMessage):
+        """xxx点赞"""
+
+    def _on_start_live(self, client: ws_base.WebSocketClientBase, message: web_models.StartLiveMessage):
+        """开始直播"""
+
+    def _on_online_rank_count(self, client: ws_base.WebSocketClientBase, message: web_models.OnlineRankCountMessage):
+        """高能榜人数"""
+
 
     #
     # 开放平台消息

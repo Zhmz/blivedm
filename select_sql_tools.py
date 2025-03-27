@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2 import sql
 
 
+
 def query_danmu_by_room_and_timespan(conn_params, room_id, start_ts, end_ts):
     conn = None
     try:
@@ -78,14 +79,14 @@ if __name__ == "__main__":
     # )
 
     # 礼物
-    data,data_count = query_gift_by_room_and_timespan(
+    data,data_count = query_danmu_by_room_and_timespan(
         conn_params=db_config,
-        room_id="30762538",
-        start_ts=1742464800000,
-        end_ts=1742467800000
+        room_id="31835822",
+        start_ts=1742774400000,
+        end_ts=1742783400000
     )
 
 
-    for row in data:
-        print(row)
+    # for row in data:
+    #     print(row)
     print("row_count = {0}".format(data_count))

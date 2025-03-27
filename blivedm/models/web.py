@@ -7,6 +7,7 @@ __all__ = (
     'HeartbeatMessage',
     'DanmakuMessage',
     'GiftMessage',
+    'ComboSendMessage',
     'GuardBuyMessage',
     'SuperChatMessage',
     'SuperChatDeleteMessage',
@@ -334,6 +335,62 @@ class GiftMessage:
             medal_ruid=medal_ruid,
         )
 
+@dataclasses.dataclass
+class ComboSendMessage:
+    """
+    礼物连击消息
+    """
+
+    uid: str = ''
+    """用户ID"""
+    username: str = ''
+    """用户名"""
+
+    gift_id: int = 0
+    """礼物ID"""
+    gift_name: str = ''
+    """礼物名"""
+    total_num: int = 0
+    """连击礼物数量"""
+
+    combo_id: str = ''
+    """连击id"""
+    combo_num: int = 0
+    """连击数量"""
+    combo_total_coin: int = 0
+    """连击总硬币数"""
+    action: str = ''
+    """礼物操作，一般为“投喂”"""
+    batch_combo_id: str = ''
+    """批量连击id"""
+    batch_combo_num: int = 0
+    """批量连击数量"""
+
+    r_uid: int = 0
+    """主播uid"""
+    r_uname: str = ''
+    """主播名字"""
+
+    @classmethod
+    def from_command(cls, data: dict):
+        return cls(
+            uid=data['uid'],
+            username=data['username'],
+
+            gift_id=data['gift_id'],
+            gift_name=data['gift_name'],
+            total_num=data['total_num'],
+
+            combo_id=data['combo_id'],
+            combo_num=data['combo_num'],
+            combo_total_coin=data['combo_total_coin'],
+            action=data['action'],
+            batch_combo_id=data['batch_combo_id'],
+            batch_combo_num=data['batch_combo_num'],
+
+            r_uid=data['r_uid'],
+            r_uname=data['r_uname'],
+        )
 
 @dataclasses.dataclass
 class GuardBuyMessage:
@@ -564,3 +621,78 @@ class InteractWordMessage:
             timestamp=data['timestamp'],
             msg_type=data['msg_type'],
         )
+
+
+@dataclasses.dataclass
+class WatchChangeMessage:
+    """
+    观看人数消息
+    """
+
+    num: int = 0
+    """看过人数"""
+    text_small:str = ''
+    """小字"""
+    text_large:str = ''
+    """大字"""
+
+    @classmethod
+    def from_command(cls, data: dict):
+        return cls(
+            num=data['num'],
+            text_small=data['text_small'],
+            text_large=data['text_large'],
+        )
+
+
+@dataclasses.dataclass
+class LikeInfoUpdateMessage:
+    """
+    点赞消息
+    """
+
+    click_count: int = 0
+    """点赞次数"""
+
+    @classmethod
+    def from_command(cls, data: dict):
+        return cls(
+            click_count=data['click_count'],
+        )
+
+@dataclasses.dataclass
+class StartLiveMessage:
+    """
+    开始直播消息
+    """
+
+    live_key: str = ''
+    """点赞次数"""
+    live_timestamp: int = 0
+    """开播时间（秒）"""
+    room_id: int = 0
+    """房间id"""
+
+    @classmethod
+    def from_command(cls, data: dict):
+        return cls(
+            live_key=data['live_key'],
+            live_timestamp=data['live_time'],
+            room_id=data['room_id'],
+        )
+
+@dataclasses.dataclass
+class OnlineRankCountMessage:
+    """
+    高能榜人数消息
+    """
+
+    count: int = 0
+    """高能榜人数"""
+
+    @classmethod
+    def from_command(cls, data: dict):
+        return cls(
+            count=data['count'],
+        )
+

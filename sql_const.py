@@ -4,6 +4,7 @@ exist_table_sql = """SELECT to_regclass(%s) IS NOT NULL AS table_exists;"""
 
 delete_table_sql = """DROP table IF EXISTS %s;"""
 
+"""基础数据表"""
 create_danmu_table_sql = """CREATE TABLE danmu_table (
 id serial4 PRIMARY KEY,
 
@@ -148,6 +149,77 @@ datatime
 %(medal_name)s,
 %(medal_room_id)s,
 %(medal_room_uid)s,
+
+%(timestamp)s,
+%(datatime)s
+);"""
+
+
+create_combo_send_table_sql = """CREATE TABLE combo_send_table (
+id serial4 PRIMARY KEY,
+
+room_id varchar(10),
+user_id text,
+user_name varchar(100),
+
+gift_id int,
+gift_name text,
+total_num int,
+
+combo_id int,
+combo_num int,
+combo_total_coin int,
+action text,
+batch_combo_id int,
+batch_combo_num int,
+
+r_uid int,
+r_uname text,
+
+timestamp bigint,
+datatime timestamp
+);"""
+
+
+insert_combo_send_table_sql = """INSERT INTO combo_send_table (
+room_id,
+user_id,
+user_name,
+
+gift_id,
+gift_name,
+total_num,
+
+combo_id,
+combo_num,
+combo_total_coin,
+action,
+batch_combo_id,
+batch_combo_num,
+
+r_uid,
+r_uname,
+
+timestamp,
+datatime
+) VALUES (
+%(room_id)s,
+%(user_id)s,
+%(user_name)s,
+
+%(gift_id)s,
+%(gift_name)s,
+%(total_num)s,
+
+%(combo_id)s,
+%(combo_num)s,
+%(combo_total_coin)s,
+%(action)s,
+%(batch_combo_id)s,
+%(batch_combo_num)s,
+
+%(r_uid)s,
+%(r_uname)s,
 
 %(timestamp)s,
 %(datatime)s
@@ -372,12 +444,88 @@ datatime
 );"""
 
 
-select_danmu_table_sql = """SELECT * FROM danmu_table
-WHERE room_id = '22603245' AND timestamp >= 1742456400000 AND timestamp <= 1742456700000
-;"""
+"""分钟表"""
+# 付费榜人数分钟表
+create_online_rank_count_minute_table_sql = """CREATE TABLE online_rank_count_minute_table (
+id serial4 PRIMARY KEY,
+
+room_id varchar(10),
+count int,
+
+timestamp bigint,
+datatime timestamp
+);"""
 
 
+insert_online_rank_count_minute_table_sql = """INSERT INTO online_rank_count_minute_table (
+room_id,
+count,
 
+timestamp,
+datatime
+) VALUES (
+%(room_id)s,
+%(count)s,
+
+%(timestamp)s,
+%(datatime)s
+);"""
+
+
+# 互动次数分钟表
+create_interact_word_count_minute_table_sql = """CREATE TABLE interact_word_count_minute_table (
+id serial4 PRIMARY KEY,
+
+room_id varchar(10),
+count int,
+
+timestamp bigint,
+datatime timestamp
+);"""
+
+
+insert_interact_word_count_minute_table_sql = """INSERT INTO interact_word_count_minute_table (
+room_id,
+count,
+
+timestamp,
+datatime
+) VALUES (
+%(room_id)s,
+%(count)s,
+
+%(timestamp)s,
+%(datatime)s
+);"""
+
+
+# 进入房间人次分钟表
+create_enter_room_count_minute_table_sql = """CREATE TABLE enter_room_count_minute_table (
+id serial4 PRIMARY KEY,
+
+room_id varchar(10),
+count int,
+
+timestamp bigint,
+datatime timestamp
+);"""
+
+
+insert_enter_room_count_minute_table_sql = """INSERT INTO enter_room_count_minute_table (
+room_id,
+count,
+
+timestamp,
+datatime
+) VALUES (
+%(room_id)s,
+%(count)s,
+
+%(timestamp)s,
+%(datatime)s
+);"""
+
+"""场次表"""
 
 
 

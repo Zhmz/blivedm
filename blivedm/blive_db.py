@@ -18,12 +18,14 @@ connection = psycopg2.connect(**db_config)
 cursor = connection.cursor()
 
 #sql语句，建表
-sql ="""select * from buy_guard_table"""
-#sql ="""DROP table danmu_table,gift_table,buy_guard_table,user_toast_v2_table,super_chat_table,interact_word_table"""
+sql ="""select * from enter_room_count_minute_table"""
+#sql ="""DROP table online_rank_count_table"""
 #danmu_table,gift_table,buy_guard_table,user_toast_v2_table,super_chat_table,interact_word_table
+#online_rank_count_minute_table,interact_word_count_minute_table,enter_room_count_minute_table
 
-#sql = exist_table_sql
-#sql = delete_table_sql
+#还没创建的场次表
+#watch_change_table,like_info_update_table
+
 # 动态生成 SQL
 
 # 执行语句
