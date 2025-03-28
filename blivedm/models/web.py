@@ -375,7 +375,7 @@ class ComboSendMessage:
     def from_command(cls, data: dict):
         return cls(
             uid=data['uid'],
-            username=data['username'],
+            username=data['uname'],
 
             gift_id=data['gift_id'],
             gift_name=data['gift_name'],
@@ -678,7 +678,7 @@ class StartLiveMessage:
         return cls(
             live_key=data['live_key'],
             live_timestamp=data['live_time'],
-            room_id=data['room_id'],
+            room_id=data['roomid'],
         )
 
 @dataclasses.dataclass

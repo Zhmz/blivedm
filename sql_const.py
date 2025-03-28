@@ -525,6 +525,64 @@ datatime
 %(datatime)s
 );"""
 
+
+# 营收分钟表
+create_income_minute_table_sql = """CREATE TABLE income_minute_table (
+id serial4 PRIMARY KEY,
+
+room_id varchar(10),
+income float,
+
+timestamp bigint,
+datatime timestamp
+);"""
+
+
+insert_income_minute_table_sql = """INSERT INTO income_minute_table (
+room_id,
+income,
+
+timestamp,
+datatime
+) VALUES (
+%(room_id)s,
+%(income)s,
+
+%(timestamp)s,
+%(datatime)s
+);"""
+
+
+#直播状态分钟表
+create_live_status_minute_table_sql = """CREATE TABLE live_status_minute_table (
+id serial4 PRIMARY KEY,
+
+room_id varchar(10),
+live_status int,
+live_action text,
+
+timestamp bigint,
+datatime timestamp
+);"""
+
+
+insert_live_status_minute_table_sql = """INSERT INTO live_status_minute_table (
+room_id,
+live_status,
+live_action,
+
+timestamp,
+datatime
+) VALUES (
+%(room_id)s,
+%(live_status)s,
+%(live_action)s,
+
+%(timestamp)s,
+%(datatime)s
+);"""
+
+
 """场次表"""
 
 

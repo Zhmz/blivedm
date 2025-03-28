@@ -61,6 +61,12 @@ def _make_msg_callback(method_name, message_cls):
         return method(client, message_cls.from_command(command['data']))
     return callback
 
+def _make_msg_live_callback(method_name, message_cls):
+    def callback(self: 'BaseHandler', client: ws_base.WebSocketClientBase, command: dict):
+        method = getattr(self, method_name)
+        return method(client, message_cls.from_command(command))
+    return callback
+
 
 class BaseHandler(HandlerInterface):
     """
@@ -105,7 +111,7 @@ class BaseHandler(HandlerInterface):
         'LIKE_INFO_V3_UPDATE': _make_msg_callback('_on_like_info_update', web_models.LikeInfoUpdateMessage),
 
         # 开始直播
-        'LIVE': _make_msg_callback('_on_start_live', web_models.StartLiveMessage),
+        'LIVE': _make_msg_live_callback('_on_start_live', web_models.StartLiveMessage),
 
         # 高能榜人数（付费榜人数）
         'ONLINE_RANK_COUNT': _make_msg_callback('_on_online_rank_count', web_models.OnlineRankCountMessage),

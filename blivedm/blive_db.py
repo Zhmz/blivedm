@@ -18,10 +18,10 @@ connection = psycopg2.connect(**db_config)
 cursor = connection.cursor()
 
 #sql语句，建表
-sql ="""select * from enter_room_count_minute_table"""
-#sql ="""DROP table online_rank_count_table"""
+sql ="""select * from live_status_minute_table WHERE room_id = '21652717'"""
+#sql ="""DROP table live_status_minute_table"""
 #danmu_table,gift_table,buy_guard_table,user_toast_v2_table,super_chat_table,interact_word_table
-#online_rank_count_minute_table,interact_word_count_minute_table,enter_room_count_minute_table
+#online_rank_count_minute_table,interact_word_count_minute_table,enter_room_count_minute_table,income_minute_table,live_status_minute_table
 
 #还没创建的场次表
 #watch_change_table,like_info_update_table

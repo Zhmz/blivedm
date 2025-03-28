@@ -10,12 +10,15 @@ from typing import *
 
 import aiohttp
 from psycopg2 import OperationalError
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
 
 import blivedm
 import blivedm.models.web as web_models
 import blivedm.models.open_live as open_models
 import json
 from pathlib import Path
+import requests
 
 import psycopg2
 
@@ -77,6 +80,12 @@ if not table_exists("interact_word_count_minute_table"):
 if not table_exists("enter_room_count_minute_table"):
     cursor.execute(create_enter_room_count_minute_table_sql)
     print("enter_room_count_minute_table created successfully")
+if not table_exists("income_minute_table"):
+    cursor.execute(create_income_minute_table_sql)
+    print("income_minute_table created successfully")
+if not table_exists("live_status_minute_table"):
+    cursor.execute(create_live_status_minute_table_sql)
+    print("live_status_minute_table created successfully")
 
 connection.commit()
 
@@ -213,6 +222,11 @@ class MyHandler(blivedm.BaseHandler):
     # 每分钟营收数据
     temp_income_minute_dict = {}
 
+    # # 直播状态数据 已存的分钟（要区分每个主播/房间号）
+    # to_save_minute_live_status_minute_dict = {}
+    # 每分钟更新直播状态
+    temp_live_status_minute_dict = {}
+
 
     def _on_heartbeat(self, client: blivedm.BLiveClient, message: web_models.HeartbeatMessage):
         print(f'[{client.room_id}] 心跳')
@@ -322,6 +336,47 @@ class MyHandler(blivedm.BaseHandler):
             cursor.executemany(insert_gift_table_sql, self.gift_commit_pool)
             connection.commit()
 
+        # 付费次数
+        if client.room_id not in self.pay_count_dict.keys():
+            self.pay_count_dict[client.room_id] = 0
+        self.pay_count_dict[client.room_id] += 1
+        print(f'[{client.room_id}] [{dt}] 付费次数： {self.pay_count_dict[client.room_id]}')
+
+        # 需要保存营收分钟表
+        # 取出当前房间号的缓存数据，分钟数和营收数
+        current_income = float(message.total_coin)/1000
+        self.accumulate_income_minute(client.room_id, seconds, current_income)
+
+    def accumulate_income_minute(self, room_id, seconds, current_income):
+        # 需要保存营收分钟表
+        # 取出当前房间号的缓存数据，分钟数和营收数
+        if room_id not in self.to_save_minute_income_minute_dict.keys():
+            self.to_save_minute_income_minute_dict[room_id] = 0
+        if room_id not in self.temp_income_minute_dict.keys():
+            self.temp_income_minute_dict[room_id] = 0
+
+        cur_minute = math.floor(seconds/60)
+        # 这里是送礼物才会触发，要写到主动下发的位置（高能榜人数）
+        if cur_minute == self.to_save_minute_income_minute_dict[room_id]:
+            # 在同一分钟内不断自增
+            self.temp_income_minute_dict[room_id] += current_income
+        print(f'[{room_id}] 当次收入：{current_income}')
+
+    def save_income_minute_to_db(self, room_id):
+        # 需要算出待存的秒级时间戳
+        to_save_second = self.to_save_minute_income_minute_dict[room_id] * 60
+        to_save_datetime = datetime.fromtimestamp(to_save_second).strftime('%Y-%m-%d %H:%M:%S')
+        params = {'room_id': room_id,
+                  'income': self.temp_income_minute_dict[room_id],
+
+                  'timestamp': to_save_second,
+                  'datatime': to_save_datetime
+                  }
+
+        cursor.execute(insert_income_minute_table_sql, params)
+        connection.commit()
+        print(f'[{room_id}] [{to_save_datetime}] 存入DB，累计营收：{self.temp_income_minute_dict[room_id]}')
+
     def _on_combo_send(self, client: blivedm.BLiveClient, message: web_models.ComboSendMessage):
         seconds = int(round(time.time()))#单位：秒
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
@@ -392,6 +447,17 @@ class MyHandler(blivedm.BaseHandler):
             self.buy_guard_db_index = 0
             cursor.executemany(insert_buy_guard_table_sql, self.buy_guard_commit_pool)
             connection.commit()
+
+        # 付费次数
+        if client.room_id not in self.pay_count_dict.keys():
+            self.pay_count_dict[client.room_id] = 0
+        self.pay_count_dict[client.room_id] += 1
+        print(f'[{client.room_id}] [{dt}] 付费次数： {self.pay_count_dict[client.room_id]}')
+
+        # 需要保存营收分钟表
+        # 取出当前房间号的缓存数据，分钟数和营收数
+        current_income = float(message)/1000
+        self.accumulate_income_minute(client.room_id, seconds, current_income)
 
     def _on_user_toast_v2(self, client: blivedm.BLiveClient, message: web_models.UserToastV2Message):
         seconds = message.start_time / 1000
@@ -466,6 +532,12 @@ class MyHandler(blivedm.BaseHandler):
             self.super_chat_db_index = 0
             cursor.executemany(insert_super_chat_table_sql, self.super_chat_commit_pool)
             connection.commit()
+
+        # 付费次数
+        if client.room_id not in self.pay_count_dict.keys():
+            self.pay_count_dict[client.room_id] = 0
+        self.pay_count_dict[client.room_id] += 1
+        print(f'[{client.room_id}] [{dt}] 付费次数： {self.pay_count_dict[client.room_id]}')
 
     def _on_interact_word(self, client: blivedm.BLiveClient, message: web_models.InteractWordMessage):
         seconds = message.timestamp
@@ -637,13 +709,20 @@ class MyHandler(blivedm.BaseHandler):
 
         cur_minute = math.floor(cur_timestamp/60)
         if cur_minute != self.to_save_minute_online_rank_count_minute_dict[client.room_id]:
-            # 这里是一定会下发的，所以把互动次数也放在这里存。执行sql存数据库（付费榜人数分钟表），存的是上一分钟的数据
+            # 这里是一定会下发的，所以把【【【营收】】】也放在这里存。执行sql存数据库（付费榜人数分钟表），存的是上一分钟的数据
             if self.to_save_minute_online_rank_count_minute_dict[client.room_id] != 0:
                 self.save_online_rank_count_minute_to_db(client.room_id)
+                self.save_income_minute_to_db(client.room_id)
+
+                # 测试获取直播状态
+                self.get_live_status(client.room_id,cur_minute*60)
 
             # 更新记录分钟和缓存人数
             self.temp_online_rank_count_minute_dict[client.room_id] = message.count
             self.to_save_minute_online_rank_count_minute_dict[client.room_id] = cur_minute
+            # 更新营收记录分钟和缓存营收
+            self.temp_income_minute_dict[client.room_id] = 0
+            self.to_save_minute_income_minute_dict[client.room_id] = cur_minute
         else:
             # 不断覆盖
             self.temp_online_rank_count_minute_dict[client.room_id] = message.count
@@ -666,6 +745,77 @@ class MyHandler(blivedm.BaseHandler):
         connection.commit()
         print(f'[{room_id}] [{to_save_datetime}] 存入DB，高能榜人数：{self.temp_online_rank_count_minute_dict[room_id]}')
 
+    def get_live_status(self, room_id, in_seconds=0):
+        cur_timestamp = in_seconds
+        if cur_timestamp == 0:
+            cur_timestamp = int(round(time.time()))#单位：秒
+        dt = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+        if room_id not in self.temp_live_status_minute_dict.keys():
+            self.temp_live_status_minute_dict[room_id] = -1
+        
+
+
+        try:
+            # 创建带重试机制的Session
+            session = requests.Session()
+            retries = Retry(total=3, backoff_factor=1, status_forcelist=[500,502,503,504])
+            session.mount('https://', HTTPAdapter(max_retries=retries))
+
+            # 发送带浏览器头的请求
+            response = session.get(
+                "https://api.live.bilibili.com/room/v1/Room/get_info",
+                params={'room_id': room_id},
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                    'Referer': f'https://live.bilibili.com/{room_id}'
+                },
+                timeout=5
+            )
+            response.raise_for_status()
+
+            result = response.json()
+            if result.get('code') == 0:
+                data = result['data']
+                if data['live_status'] == 1:
+                    start_time_str = data['live_time']
+                    dt_obj = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S")
+                    print(f"[{room_id}] [{dt}] 直播状态：直播中, live_start_time = {start_time_str},"
+                          f" timestamp = {int(dt_obj.timestamp())}, title = {data['title']}")
+                elif data['live_status'] == 2:
+                    print(f"[{room_id}] [{dt}] 直播状态：轮播中, title = {data['title']}")
+                elif data['live_status'] == 0:
+                    print(f"[{room_id}] [{dt}] 直播状态：未开播")
+            else:
+                print(f"API错误: {result.get('message')} (code:{result.get('code')})")
+
+        except requests.exceptions.RequestException as e:
+            print(f"网络请求异常: {str(e)}")
+        except KeyError as e:
+            print(f"响应数据格式异常，缺失字段: {str(e)}")
+
+
+        # 从0、2变为1是开始直播，从1变为0、2是结束直播
+        live_action = '无'
+        if self.temp_live_status_minute_dict[room_id] == 0 or self.temp_live_status_minute_dict[room_id] == 2:
+            if data['live_status'] == 1:
+                live_action = '开始直播'
+        elif self.temp_live_status_minute_dict[room_id] == 1:
+            if data['live_status'] == 0 or data['live_status'] == 2:
+                live_action = '结束直播'
+        self.temp_live_status_minute_dict[room_id] = data['live_status']
+
+        params = {'room_id': room_id,
+                  'live_status': data['live_status'],
+                  'live_action': live_action,
+
+                  'timestamp': cur_timestamp,
+                  'datatime': dt
+                  }
+
+        cursor.execute(insert_live_status_minute_table_sql, params)
+        connection.commit()
+        print(f"[{room_id}] [{dt}] 存入DB，直播状态：{data['live_status']}，直播动作：{live_action}")
 
 if __name__ == '__main__':
     asyncio.run(main())
