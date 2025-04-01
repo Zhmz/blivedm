@@ -916,7 +916,7 @@ class MyHandler(blivedm.BaseHandler):
                 execution_time = 0
                 cur_day = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d')
                 start_time_str, end_time_str, execution_time = query_live_start_end_time_by_live_date(db_config,room_id,cur_day)
-                cur_day_date = datetime.strptime(cur_day, '%Y-%m-%d %H:%M:%S')
+                cur_day_date = datetime.strptime(cur_day, '%Y-%m-%d')
                 start_time_date = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M:%S')
                 if cur_day_date.date() == start_time_date.date():
                     pay_count, total_income, pay_result, execution_time = query_pay_count_by_room_and_live_start_end_time(db_config, room_id, start_time_str, dt)
