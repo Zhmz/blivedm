@@ -583,6 +583,33 @@ datetime
 );"""
 
 
+# 弹幕数量分钟表
+create_danmu_count_minute_table_sql = """CREATE TABLE danmu_count_minute_table (
+id serial4 PRIMARY KEY,
+
+room_id varchar(10),
+count int,
+
+timestamp bigint,
+datetime timestamp
+);"""
+
+
+insert_danmu_count_minute_table_sql = """INSERT INTO danmu_count_minute_table (
+room_id,
+count,
+
+timestamp,
+datetime
+) VALUES (
+%(room_id)s,
+%(count)s,
+
+%(timestamp)s,
+%(datetime)s
+);"""
+
+
 # 营收分钟表
 create_income_minute_table_sql = """CREATE TABLE income_minute_table (
 id serial4 PRIMARY KEY,

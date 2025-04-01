@@ -18,7 +18,7 @@ connection = psycopg2.connect(**db_config)
 cursor = connection.cursor()
 
 #sql语句，建表
-sql ="""select * from income_live_table"""
+sql ="""select * from danmu_count_minute_table"""
 #sql ="""select * from live_status_minute_table WHERE room_id = '30655374' and (live_action = '开始直播' or live_action = '结束直播')"""
 #sql ="""DROP table income_live_table"""
 """基础表"""
@@ -26,7 +26,7 @@ sql ="""select * from income_live_table"""
 # super_chat_table,interact_word_table,watch_change_table,like_info_update_table
 """分钟表"""
 # online_rank_count_minute_table,interact_word_count_minute_table,
-# enter_room_count_minute_table,income_minute_table,live_status_minute_table
+# enter_room_count_minute_table,danmu_count_minute_table,income_minute_table,live_status_minute_table
 """场次表"""
 # income_live_table
 """查询条件"""

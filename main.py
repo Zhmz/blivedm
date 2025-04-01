@@ -90,6 +90,9 @@ if not table_exists("interact_word_count_minute_table"):
 if not table_exists("enter_room_count_minute_table"):
     cursor.execute(create_enter_room_count_minute_table_sql)
     print("enter_room_count_minute_table created successfully")
+if not table_exists("danmu_count_minute_table"):
+    cursor.execute(create_danmu_count_minute_table_sql)
+    print("danmu_count_minute_table created successfully")
 if not table_exists("income_minute_table"):
     cursor.execute(create_income_minute_table_sql)
     print("income_minute_table created successfully")
@@ -235,6 +238,11 @@ class MyHandler(blivedm.BaseHandler):
     # 待存进入房间人次
     temp_enter_room_count_minute_dict = {}
 
+    # 弹幕数分钟表
+    to_save_minute_danmu_count_minute_dict = {}
+    # 待存弹幕数
+    temp_danmu_count_minute_dict = {}
+
     # 每分钟营收数据 已存的分钟（要区分每个主播/房间号）
     to_save_minute_income_minute_dict = {}
     # 每分钟营收数据
@@ -253,7 +261,6 @@ class MyHandler(blivedm.BaseHandler):
         seconds = message.timestamp / 1000
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{dt}] --这是一条弹幕-- {message.uname}：{message.msg}')
-
 
         params = {'room_id': client.room_id,
                   'rnd': message.rnd,
@@ -308,6 +315,19 @@ class MyHandler(blivedm.BaseHandler):
             if message.msg_type != 1:
                 # 在同一分钟内不断自增
                 self.temp_interact_word_count_minute_dict[client.room_id] += 1
+
+        # 保存弹幕数分钟表
+        if client.room_id not in self.to_save_minute_danmu_count_minute_dict.keys():
+            self.to_save_minute_danmu_count_minute_dict[client.room_id] = 0
+        if client.room_id not in self.temp_danmu_count_minute_dict.keys():
+            self.temp_danmu_count_minute_dict[client.room_id] = 0
+
+        cur_minute = math.floor(seconds/60)
+        # 这里是送礼物才会触发，要写到主动下发的位置（高能榜人数）
+        if cur_minute == self.to_save_minute_danmu_count_minute_dict[client.room_id]:
+            # 在同一分钟内不断自增
+            self.temp_danmu_count_minute_dict[client.room_id] += 1
+        print(f'[{client.room_id}] [{dt}] 当前分钟已累计弹幕数：{self.temp_danmu_count_minute_dict[client.room_id]}')
 
     def _on_gift(self, client: blivedm.BLiveClient, message: web_models.GiftMessage):
         # gift的时间戳是秒
@@ -394,6 +414,21 @@ class MyHandler(blivedm.BaseHandler):
         cursor.execute(insert_income_minute_table_sql, params)
         connection.commit()
         print(f'[{room_id}] [{to_save_datetime}] 存入DB，累计营收：{self.temp_income_minute_dict[room_id]}')
+
+    def save_danmu_count_minute_to_db(self, room_id):
+        # 需要算出待存的秒级时间戳
+        to_save_second = self.to_save_minute_danmu_count_minute_dict[room_id] * 60
+        to_save_datetime = datetime.fromtimestamp(to_save_second).strftime('%Y-%m-%d %H:%M:%S')
+        params = {'room_id': room_id,
+                  'count': self.temp_danmu_count_minute_dict[room_id],
+
+                  'timestamp': to_save_second,
+                  'datetime': to_save_datetime
+                  }
+
+        cursor.execute(insert_danmu_count_minute_table_sql, params)
+        connection.commit()
+        print(f'[{room_id}] [{to_save_datetime}] 存入DB，当前分钟弹幕数：{self.temp_danmu_count_minute_dict[room_id]}')
 
     def _on_combo_send(self, client: blivedm.BLiveClient, message: web_models.ComboSendMessage):
         seconds = int(round(time.time()))#单位：秒
@@ -739,6 +774,7 @@ class MyHandler(blivedm.BaseHandler):
             if self.to_save_minute_online_rank_count_minute_dict[client.room_id] != 0:
                 self.save_online_rank_count_minute_to_db(client.room_id)
                 self.save_income_minute_to_db(client.room_id)
+                self.save_danmu_count_minute_to_db(client.room_id)
 
                 # 每分钟获取直播状态
                 self.get_live_status(client.room_id,cur_minute*60)
@@ -779,6 +815,9 @@ class MyHandler(blivedm.BaseHandler):
             # 更新营收记录分钟和缓存营收
             self.temp_income_minute_dict[client.room_id] = 0
             self.to_save_minute_income_minute_dict[client.room_id] = cur_minute
+            # 更新弹幕数记录分钟和缓存分钟弹幕数
+            self.temp_danmu_count_minute_dict[client.room_id] = 0
+            self.to_save_minute_danmu_count_minute_dict[client.room_id] = cur_minute
         else:
             # 不断覆盖
             self.temp_online_rank_count_minute_dict[client.room_id] = message.count
