@@ -23,6 +23,7 @@ import requests
 import psycopg2
 
 from blive_const import TEST_ROOM_IDS, SESSDATA
+from select_sql_tools import query_live_start_end_time_by_live_date, query_pay_count_by_room_and_live_start_end_time
 from sql_const import *
 
 
@@ -57,6 +58,9 @@ if not table_exists("danmu_table"):
 if not table_exists("gift_table"):
     cursor.execute(create_gift_table_sql)
     print("gift_table created successfully")
+if not table_exists("combo_send_table"):
+    cursor.execute(create_combo_send_table_sql)
+    print("combo_send_table created successfully")
 if not table_exists("buy_guard_table"):
     cursor.execute(create_buy_guard_table_sql)
     print("buy_guard_table created successfully")
@@ -69,6 +73,12 @@ if not table_exists("super_chat_table"):
 if not table_exists("interact_word_table"):
     cursor.execute(create_interact_word_table_sql)
     print("interact_word_table created successfully")
+if not table_exists("watch_change_table"):
+    cursor.execute(create_watch_change_table_sql)
+    print("watch_change_table created successfully")
+if not table_exists("like_info_update_table"):
+    cursor.execute(create_like_info_update_table_sql)
+    print("like_info_update_table created successfully")
 
 # 创建分钟表
 if not table_exists("online_rank_count_minute_table"):
@@ -86,6 +96,14 @@ if not table_exists("income_minute_table"):
 if not table_exists("live_status_minute_table"):
     cursor.execute(create_live_status_minute_table_sql)
     print("live_status_minute_table created successfully")
+
+# 创建场次表
+# if not table_exists("pay_count_live_table"):
+#     cursor.execute(create_pay_count_live_table_sql)
+#     print("pay_count_live_table created successfully")
+if not table_exists("income_live_table"):
+    cursor.execute(create_income_live_table_sql)
+    print("income_live_table created successfully")
 
 connection.commit()
 
@@ -198,7 +216,7 @@ class MyHandler(blivedm.BaseHandler):
     watch_change_dict = {}
     # 点赞人数
     like_info_update_dict = {}
-    # 付费次数
+    # 付费次数（暂时不用，或者后面给分钟表用）
     pay_count_dict = {}
 
     """分钟表的缓存数据"""
@@ -254,7 +272,7 @@ class MyHandler(blivedm.BaseHandler):
                   'medal_room_name': message.runame,
 
                   'timestamp': message.timestamp,
-                  'datatime': dt
+                  'datetime': dt
                   }
 
         # 存入对象池
@@ -321,7 +339,7 @@ class MyHandler(blivedm.BaseHandler):
                   'medal_room_uid': message.medal_ruid,
 
                   'timestamp': message.timestamp*1000,#改为毫秒存入数据库
-                  'datatime': dt
+                  'datetime': dt
                   }
 
         # 存入对象池
@@ -344,7 +362,7 @@ class MyHandler(blivedm.BaseHandler):
 
         # 需要保存营收分钟表
         # 取出当前房间号的缓存数据，分钟数和营收数
-        current_income = float(message.total_coin)/1000
+        current_income = round(float(message.total_coin)/1000, 1)
         self.accumulate_income_minute(client.room_id, seconds, current_income)
 
     def accumulate_income_minute(self, room_id, seconds, current_income):
@@ -370,7 +388,7 @@ class MyHandler(blivedm.BaseHandler):
                   'income': self.temp_income_minute_dict[room_id],
 
                   'timestamp': to_save_second,
-                  'datatime': to_save_datetime
+                  'datetime': to_save_datetime
                   }
 
         cursor.execute(insert_income_minute_table_sql, params)
@@ -380,8 +398,8 @@ class MyHandler(blivedm.BaseHandler):
     def _on_combo_send(self, client: blivedm.BLiveClient, message: web_models.ComboSendMessage):
         seconds = int(round(time.time()))#单位：秒
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
-        print(f'[{client.room_id}] [{dt}] {message.uname} 礼物连击 {message.gift_name}x{message.total_num}，combo_num = {message.combo_num}'
-              f' （瓜子x{message.combo_total_coin}）')
+        print(f'[{client.room_id}] [{dt}] {message.username} 礼物连击 {message.gift_name}x{message.total_num}'
+              f'，combo_num = {message.combo_num}，（瓜子x{message.combo_total_coin}）')
 
         params = {'room_id': client.room_id,
                   'user_id': message.uid,
@@ -402,7 +420,7 @@ class MyHandler(blivedm.BaseHandler):
                   'r_uname': message.r_uname,
 
                   'timestamp': seconds*1000,
-                  'datatime': dt
+                  'datetime': dt
                   }
 
         # 存入对象池
@@ -418,7 +436,7 @@ class MyHandler(blivedm.BaseHandler):
             connection.commit()
 
     def _on_buy_guard(self, client: blivedm.BLiveClient, message: web_models.GuardBuyMessage):
-        seconds = message.start_time / 1000
+        seconds = message.start_time
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{dt}] {message.username} 上舰，guard_level={message.guard_level}')
 
@@ -433,7 +451,7 @@ class MyHandler(blivedm.BaseHandler):
                   'gift_per_price': message.price,
 
                   'timestamp': message.start_time*1000,
-                  'datatime': dt
+                  'datetime': dt
                   }
 
         # 存入对象池
@@ -456,11 +474,12 @@ class MyHandler(blivedm.BaseHandler):
 
         # 需要保存营收分钟表
         # 取出当前房间号的缓存数据，分钟数和营收数
-        current_income = float(message)/1000
+        # 舰长使用的是金瓜子
+        current_income = round(float(message.price * message.num)/1000, 1)
         self.accumulate_income_minute(client.room_id, seconds, current_income)
 
     def _on_user_toast_v2(self, client: blivedm.BLiveClient, message: web_models.UserToastV2Message):
-        seconds = message.start_time / 1000
+        seconds = message.start_time
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{dt}] {message.username} 上舰，guard_level={message.guard_level}')
 
@@ -477,7 +496,7 @@ class MyHandler(blivedm.BaseHandler):
                   'toast_msg': message.toast_msg,
 
                   'timestamp': message.start_time*1000,
-                  'datatime': dt
+                  'datetime': dt
                   }
 
         # 存入对象池
@@ -493,7 +512,7 @@ class MyHandler(blivedm.BaseHandler):
             connection.commit()
 
     def _on_super_chat(self, client: blivedm.BLiveClient, message: web_models.SuperChatMessage):
-        seconds = message.start_time / 1000
+        seconds = message.start_time
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{dt}] 醒目留言 ¥{message.price} {message.uname}：{message.message}')
 
@@ -510,6 +529,7 @@ class MyHandler(blivedm.BaseHandler):
                   'available_timestamp': message.time,
                   'gift_id': message.gift_id,
                   'gift_name': message.gift_name,
+                  'gift_num': message.gift_num,
 
                   'medal_level': message.medal_level,
                   'medal_name': message.medal_name,
@@ -518,7 +538,7 @@ class MyHandler(blivedm.BaseHandler):
 
                   'start_timestamp': message.start_time*1000,
                   'end_timestamp': message.end_time*1000,
-                  'datatime': dt
+                  'datetime': dt
                   }
 
         # 存入对象池
@@ -538,6 +558,12 @@ class MyHandler(blivedm.BaseHandler):
             self.pay_count_dict[client.room_id] = 0
         self.pay_count_dict[client.room_id] += 1
         print(f'[{client.room_id}] [{dt}] 付费次数： {self.pay_count_dict[client.room_id]}')
+
+        # 需要保存营收分钟表
+        # 取出当前房间号的缓存数据，分钟数和营收数
+        # SC使用的是人民币
+        current_income = round(float(message.price * message.gift_num), 1)
+        self.accumulate_income_minute(client.room_id, seconds, current_income)
 
     def _on_interact_word(self, client: blivedm.BLiveClient, message: web_models.InteractWordMessage):
         seconds = message.timestamp
@@ -576,7 +602,7 @@ class MyHandler(blivedm.BaseHandler):
                       'msg_text': temp_interact_word["action"],
 
                       'timestamp': message.timestamp*1000,
-                      'datatime': dt
+                      'datetime': dt
                       }
 
             # 存入对象池
@@ -642,7 +668,7 @@ class MyHandler(blivedm.BaseHandler):
                   'count': self.temp_enter_room_count_minute_dict[room_id],
 
                   'timestamp': to_save_second,
-                  'datatime': to_save_datetime
+                  'datetime': to_save_datetime
                   }
 
         cursor.execute(insert_enter_room_count_minute_table_sql, params)
@@ -658,7 +684,7 @@ class MyHandler(blivedm.BaseHandler):
                   'count': self.temp_interact_word_count_minute_dict[room_id],
 
                   'timestamp': to_save_second,
-                  'datatime': to_save_datetime
+                  'datetime': to_save_datetime
                   }
 
         cursor.execute(insert_interact_word_count_minute_table_sql, params)
@@ -714,8 +740,38 @@ class MyHandler(blivedm.BaseHandler):
                 self.save_online_rank_count_minute_to_db(client.room_id)
                 self.save_income_minute_to_db(client.room_id)
 
-                # 测试获取直播状态
+                # 每分钟获取直播状态
                 self.get_live_status(client.room_id,cur_minute*60)
+
+                # # 测试：看过和点赞先放在这每分钟存（和整分钟错开）
+                # self.save_watch_change_to_db(client.room_id, cur_timestamp, cur_dt)
+                # self.save_like_info_update_to_db(client.room_id, cur_timestamp, cur_dt)
+
+                # # 测试：当前直播场次到当前时刻的营收数据
+                # # 需要将场次表各个信息的数据存入DB
+                # room_id = client.room_id
+                # dt = cur_dt
+                # watch_change_count = 0
+                # if room_id in self.watch_change_dict.keys():
+                #     watch_change_count = self.watch_change_dict[room_id]
+                # like_info_update_count = 0
+                # if room_id in self.like_info_update_dict.keys():
+                #     like_info_update_count = self.like_info_update_dict[room_id]
+                # 
+                # # 先要找最近一次的开始直播的时间
+                # pay_count = 0
+                # total_income = 0
+                # pay_result = {}
+                # execution_time = 0
+                # cur_day = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d')
+                # start_time_str, end_time_str, execution_time = query_live_start_end_time_by_live_date(db_config,room_id,cur_day)
+                # cur_day_date = datetime.strptime(cur_day, '%Y-%m-%d')
+                # start_time_date = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M:%S')
+                # if cur_day_date.date() == start_time_date.date():
+                #     pay_count, total_income, pay_result, execution_time = query_pay_count_by_room_and_live_start_end_time(db_config, room_id, start_time_str, dt)
+                # 
+                # self.save_income_live_to_db(room_id, start_time_str, dt, pay_count, total_income,
+                #                             watch_change_count, like_info_update_count, cur_timestamp, dt)
 
             # 更新记录分钟和缓存人数
             self.temp_online_rank_count_minute_dict[client.room_id] = message.count
@@ -738,7 +794,7 @@ class MyHandler(blivedm.BaseHandler):
                   'count': self.temp_online_rank_count_minute_dict[room_id],
 
                   'timestamp': to_save_second,
-                  'datatime': to_save_datetime
+                  'datetime': to_save_datetime
                   }
 
         cursor.execute(insert_online_rank_count_minute_table_sql, params)
@@ -747,14 +803,13 @@ class MyHandler(blivedm.BaseHandler):
 
     def get_live_status(self, room_id, in_seconds=0):
         cur_timestamp = in_seconds
+        # 如果没传入整分钟的时间戳，那就拿当前时间戳
         if cur_timestamp == 0:
             cur_timestamp = int(round(time.time()))#单位：秒
         dt = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
         if room_id not in self.temp_live_status_minute_dict.keys():
             self.temp_live_status_minute_dict[room_id] = -1
-        
-
 
         try:
             # 创建带重试机制的Session
@@ -803,6 +858,35 @@ class MyHandler(blivedm.BaseHandler):
         elif self.temp_live_status_minute_dict[room_id] == 1:
             if data['live_status'] == 0 or data['live_status'] == 2:
                 live_action = '结束直播'
+                # 下播时将看过和点赞存入数据库
+                self.save_watch_change_to_db(room_id, cur_timestamp, dt)
+                self.save_like_info_update_to_db(room_id, cur_timestamp, dt)
+
+                # 需要将场次表各个信息的数据存入DB
+                watch_change_count = 0
+                if room_id in self.watch_change_dict.keys():
+                    watch_change_count = self.watch_change_dict[room_id]
+                like_info_update_count = 0
+                if room_id in self.like_info_update_dict.keys():
+                    like_info_update_count = self.like_info_update_dict[room_id]
+
+                # 先要找最近一次的开始直播的时间
+                pay_count = 0
+                total_income = 0
+                pay_result = {}
+                execution_time = 0
+                cur_day = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d')
+                start_time_str, end_time_str, execution_time = query_live_start_end_time_by_live_date(db_config,room_id,cur_day)
+                cur_day_date = datetime.strptime(cur_day, '%Y-%m-%d %H:%M:%S')
+                start_time_date = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M:%S')
+                if cur_day_date.date() == start_time_date.date():
+                    pay_count, total_income, pay_result, execution_time = query_pay_count_by_room_and_live_start_end_time(db_config, room_id, start_time_str, dt)
+
+                # 开始存
+                self.save_income_live_to_db(room_id, start_time_str, dt, pay_count, total_income,
+                                            watch_change_count, like_info_update_count, cur_timestamp, dt)
+
+
         self.temp_live_status_minute_dict[room_id] = data['live_status']
 
         params = {'room_id': room_id,
@@ -810,12 +894,75 @@ class MyHandler(blivedm.BaseHandler):
                   'live_action': live_action,
 
                   'timestamp': cur_timestamp,
-                  'datatime': dt
+                  'datetime': dt
                   }
 
         cursor.execute(insert_live_status_minute_table_sql, params)
         connection.commit()
         print(f"[{room_id}] [{dt}] 存入DB，直播状态：{data['live_status']}，直播动作：{live_action}")
+
+    def save_watch_change_to_db(self, room_id, seconds, dt):
+        if room_id not in self.watch_change_dict.keys():
+            return
+
+        params = {'room_id': room_id,
+                  'count': self.watch_change_dict[room_id],
+
+                  'timestamp': seconds,
+                  'datetime': dt
+                  }
+
+        cursor.execute(insert_watch_change_table_sql, params)
+        connection.commit()
+        print(f"[{room_id}] [{dt}] 存入DB，当前场次 观看人次：{self.watch_change_dict[room_id]}")
+
+    def save_like_info_update_to_db(self, room_id, seconds, dt):
+        if room_id not in self.like_info_update_dict.keys():
+            return
+
+        params = {'room_id': room_id,
+                  'count': self.like_info_update_dict[room_id],
+
+                  'timestamp': seconds,
+                  'datetime': dt
+                  }
+
+        cursor.execute(insert_like_info_update_table_sql, params)
+        connection.commit()
+        print(f"[{room_id}] [{dt}] 存入DB，当前场次 点赞次数：{self.like_info_update_dict[room_id]}")
+
+    # def save_pay_count_live_to_db(self, room_id, pay_count, seconds, dt):
+    #     params = {'room_id': room_id,
+    #               'pay_count': pay_count,
+    # 
+    #               'timestamp': seconds,
+    #               'datetime': dt
+    #               }
+    # 
+    #     cursor.execute(insert_pay_count_live_table_sql, params)
+    #     connection.commit()
+    #     print(f"[{room_id}] [{dt}] 存入DB，当前场次 付费次数：{pay_count}")
+
+    def save_income_live_to_db(self, room_id, start_time_str, end_time_str, pay_count,  income,
+                               watch_change_count, like_info_update_count, seconds, dt):
+        params = {'room_id': room_id,
+                  'start_time_str': start_time_str,
+                  'end_time_str': end_time_str,
+
+                  'pay_count': pay_count,
+                  'income': income,
+                  'watch_change_count': watch_change_count,
+                  'like_info_update_count': like_info_update_count,
+
+                  'timestamp': seconds,
+                  'datetime': dt
+                  }
+
+        cursor.execute(insert_income_live_table_sql, params)
+        connection.commit()
+        print(f"[{room_id}] [{dt}] 存入DB，当前场次 开始时间：{start_time_str}，结束时间：{end_time_str}，"
+              f"付费次数：{pay_count}，总营收：{income}，观看人次：{watch_change_count}，点赞次数：{like_info_update_count}")
+
 
 if __name__ == '__main__':
     asyncio.run(main())

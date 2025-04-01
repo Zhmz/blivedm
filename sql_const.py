@@ -26,7 +26,7 @@ medal_room_id bigint,
 medal_room_name text,
 
 timestamp bigint,
-datatime timestamp
+datetime timestamp
 );"""
 
 insert_danmu_table_sql = """INSERT INTO danmu_table (
@@ -48,7 +48,7 @@ medal_room_id,
 medal_room_name,
 
 timestamp,
-datatime
+datetime
 ) VALUES (
 %(room_id)s,
 %(rnd)s,
@@ -68,7 +68,7 @@ datatime
 %(medal_room_name)s,
 
 %(timestamp)s,
-%(datatime)s
+%(datetime)s
 );"""
 
 
@@ -98,7 +98,7 @@ medal_room_id bigint,
 medal_room_uid bigint,
 
 timestamp bigint,
-datatime timestamp
+datetime timestamp
 );"""
 
 
@@ -126,7 +126,7 @@ medal_room_id,
 medal_room_uid,
 
 timestamp,
-datatime
+datetime
 ) VALUES (
 %(room_id)s,
 %(rnd)s,
@@ -151,7 +151,7 @@ datatime
 %(medal_room_uid)s,
 
 %(timestamp)s,
-%(datatime)s
+%(datetime)s
 );"""
 
 
@@ -166,18 +166,18 @@ gift_id int,
 gift_name text,
 total_num int,
 
-combo_id int,
+combo_id text,
 combo_num int,
 combo_total_coin int,
 action text,
-batch_combo_id int,
+batch_combo_id text,
 batch_combo_num int,
 
-r_uid int,
+r_uid bigint,
 r_uname text,
 
 timestamp bigint,
-datatime timestamp
+datetime timestamp
 );"""
 
 
@@ -201,7 +201,7 @@ r_uid,
 r_uname,
 
 timestamp,
-datatime
+datetime
 ) VALUES (
 %(room_id)s,
 %(user_id)s,
@@ -222,7 +222,7 @@ datatime
 %(r_uname)s,
 
 %(timestamp)s,
-%(datatime)s
+%(datetime)s
 );"""
 
 
@@ -240,7 +240,7 @@ gift_num int,
 gift_per_price int,
 
 timestamp bigint,
-datatime timestamp
+datetime timestamp
 );"""
 
 
@@ -256,7 +256,7 @@ gift_num,
 gift_per_price,
 
 timestamp,
-datatime
+datetime
 ) VALUES (
 %(room_id)s,
 %(user_id)s,
@@ -269,7 +269,7 @@ datatime
 %(gift_per_price)s,
 
 %(timestamp)s,
-%(datatime)s
+%(datetime)s
 );"""
 
 
@@ -289,7 +289,7 @@ source int,
 toast_msg text,
 
 timestamp bigint,
-datatime timestamp
+datetime timestamp
 );"""
 
 
@@ -307,7 +307,7 @@ source,
 toast_msg,
 
 timestamp,
-datatime
+datetime
 ) VALUES (
 %(room_id)s,
 %(user_id)s,
@@ -322,7 +322,7 @@ datatime
 %(toast_msg)s,
 
 %(timestamp)s,
-%(datatime)s
+%(datetime)s
 );"""
 
 
@@ -342,6 +342,7 @@ super_chat_msg text,
 available_timestamp int,
 gift_id int,
 gift_name text,
+gift_num int,
 
 medal_level int,
 medal_name text,
@@ -350,7 +351,7 @@ medal_room_uid bigint,
 
 start_timestamp bigint,
 end_timestamp bigint,
-datatime timestamp
+datetime timestamp
 );"""
 
 
@@ -368,6 +369,7 @@ super_chat_msg,
 available_timestamp,
 gift_id,
 gift_name,
+gift_num,
 
 medal_level,
 medal_name,
@@ -376,7 +378,7 @@ medal_room_uid,
 
 start_timestamp,
 end_timestamp,
-datatime
+datetime
 ) VALUES (
 %(room_id)s,
 %(user_id)s,
@@ -391,6 +393,7 @@ datatime
 %(available_timestamp)s,
 %(gift_id)s,
 %(gift_name)s,
+%(gift_num)s,
 
 %(medal_level)s,
 %(medal_name)s,
@@ -399,7 +402,7 @@ datatime
 
 %(start_timestamp)s,
 %(end_timestamp)s,
-%(datatime)s
+%(datetime)s
 );"""
 
 
@@ -415,7 +418,7 @@ msg_type int,
 msg_text text,
 
 timestamp bigint,
-datatime timestamp
+datetime timestamp
 );"""
 
 
@@ -429,7 +432,7 @@ msg_type,
 msg_text,
 
 timestamp,
-datatime
+datetime
 ) VALUES (
 %(room_id)s,
 %(user_id)s,
@@ -440,7 +443,61 @@ datatime
 %(msg_text)s,
 
 %(timestamp)s,
-%(datatime)s
+%(datetime)s
+);"""
+
+
+# 看过人次表
+create_watch_change_table_sql = """CREATE TABLE watch_change_table (
+id serial4 PRIMARY KEY,
+
+room_id varchar(10),
+count int,
+
+timestamp bigint,
+datetime timestamp
+);"""
+
+
+insert_watch_change_table_sql = """INSERT INTO watch_change_table (
+room_id,
+count,
+
+timestamp,
+datetime
+) VALUES (
+%(room_id)s,
+%(count)s,
+
+%(timestamp)s,
+%(datetime)s
+);"""
+
+
+# 点赞表
+create_like_info_update_table_sql = """CREATE TABLE like_info_update_table (
+id serial4 PRIMARY KEY,
+
+room_id varchar(10),
+count int,
+
+timestamp bigint,
+datetime timestamp
+);"""
+
+
+insert_like_info_update_table_sql = """INSERT INTO like_info_update_table (
+room_id,
+count,
+
+timestamp,
+datetime
+) VALUES (
+%(room_id)s,
+%(count)s,
+
+%(timestamp)s,
+%(datetime)s
 );"""
 
 
@@ -453,7 +510,7 @@ room_id varchar(10),
 count int,
 
 timestamp bigint,
-datatime timestamp
+datetime timestamp
 );"""
 
 
@@ -462,13 +519,13 @@ room_id,
 count,
 
 timestamp,
-datatime
+datetime
 ) VALUES (
 %(room_id)s,
 %(count)s,
 
 %(timestamp)s,
-%(datatime)s
+%(datetime)s
 );"""
 
 
@@ -480,7 +537,7 @@ room_id varchar(10),
 count int,
 
 timestamp bigint,
-datatime timestamp
+datetime timestamp
 );"""
 
 
@@ -489,13 +546,13 @@ room_id,
 count,
 
 timestamp,
-datatime
+datetime
 ) VALUES (
 %(room_id)s,
 %(count)s,
 
 %(timestamp)s,
-%(datatime)s
+%(datetime)s
 );"""
 
 
@@ -507,7 +564,7 @@ room_id varchar(10),
 count int,
 
 timestamp bigint,
-datatime timestamp
+datetime timestamp
 );"""
 
 
@@ -516,13 +573,13 @@ room_id,
 count,
 
 timestamp,
-datatime
+datetime
 ) VALUES (
 %(room_id)s,
 %(count)s,
 
 %(timestamp)s,
-%(datatime)s
+%(datetime)s
 );"""
 
 
@@ -534,7 +591,7 @@ room_id varchar(10),
 income float,
 
 timestamp bigint,
-datatime timestamp
+datetime timestamp
 );"""
 
 
@@ -543,13 +600,13 @@ room_id,
 income,
 
 timestamp,
-datatime
+datetime
 ) VALUES (
 %(room_id)s,
 %(income)s,
 
 %(timestamp)s,
-%(datatime)s
+%(datetime)s
 );"""
 
 
@@ -562,7 +619,7 @@ live_status int,
 live_action text,
 
 timestamp bigint,
-datatime timestamp
+datetime timestamp
 );"""
 
 
@@ -572,19 +629,93 @@ live_status,
 live_action,
 
 timestamp,
-datatime
+datetime
 ) VALUES (
 %(room_id)s,
 %(live_status)s,
 %(live_action)s,
 
 %(timestamp)s,
-%(datatime)s
+%(datetime)s
 );"""
 
 
 """场次表"""
+# # 场次付费次数表
+# create_pay_count_live_table_sql = """CREATE TABLE pay_count_live_table (
+# id serial4 PRIMARY KEY,
+# 
+# room_id varchar(10),
+# start_time_str text,
+# end_time_str text,
+# pay_count int,
+# 
+# timestamp bigint,
+# datetime timestamp
+# );"""
+# 
+# 
+# insert_pay_count_live_table_sql = """INSERT INTO pay_count_live_table (
+# room_id,
+# start_time_str,
+# end_time_str,
+# pay_count,
+# 
+# timestamp,
+# datetime
+# ) VALUES (
+# %(room_id)s,
+# %(start_time_str)s,
+# %(end_time_str)s,
+# %(pay_count)s,
+# 
+# %(timestamp)s,
+# %(datetime)s
+# );"""
 
+# 场次营收表
+create_income_live_table_sql = """CREATE TABLE income_live_table (
+id serial4 PRIMARY KEY,
+
+room_id varchar(10),
+start_time_str text,
+end_time_str text,
+
+pay_count int,
+income float,
+watch_change_count int,
+like_info_update_count int,
+
+timestamp bigint,
+datetime timestamp
+);"""
+
+
+insert_income_live_table_sql = """INSERT INTO income_live_table (
+room_id,
+start_time_str,
+end_time_str,
+
+pay_count,
+income,
+watch_change_count,
+like_info_update_count,
+
+timestamp,
+datetime
+) VALUES (
+%(room_id)s,
+%(start_time_str)s,
+%(end_time_str)s,
+
+%(pay_count)s,
+%(income)s,
+%(watch_change_count)s,
+%(like_info_update_count)s,
+
+%(timestamp)s,
+%(datetime)s
+);"""
 
 
 

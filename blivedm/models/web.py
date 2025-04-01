@@ -388,7 +388,7 @@ class ComboSendMessage:
             batch_combo_id=data['batch_combo_id'],
             batch_combo_num=data['batch_combo_num'],
 
-            r_uid=data['r_uid'],
+            r_uid=data['ruid'],
             r_uname=data['r_uname'],
         )
 
@@ -507,6 +507,8 @@ class SuperChatMessage:
     """礼物ID"""
     gift_name: str = ''
     """礼物名"""
+    gift_num: int = 0
+    """礼物数量"""
     uid: str = ''
     """用户ID"""
     uname: str = ''
@@ -560,6 +562,7 @@ class SuperChatMessage:
             id=data['id'],
             gift_id=data['gift']['gift_id'],
             gift_name=data['gift']['gift_name'],
+            gift_num=data['gift']['num'],
             uid=data['uid'],
             uname=data['user_info']['uname'],
             face=data['user_info']['face'],
