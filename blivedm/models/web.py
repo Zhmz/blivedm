@@ -670,9 +670,9 @@ class StartLiveMessage:
     """
 
     live_key: str = ''
-    """点赞次数"""
-    live_timestamp: int = 0
-    """开播时间（秒）"""
+    """直播key"""
+    # live_timestamp: int = 0
+    # """开播时间（秒）"""
     room_id: int = 0
     """房间id"""
 
@@ -680,7 +680,7 @@ class StartLiveMessage:
     def from_command(cls, data: dict):
         return cls(
             live_key=data['live_key'],
-            live_timestamp=data['live_time'],
+            # live_timestamp=data['live_time'],
             room_id=data['roomid'],
         )
 

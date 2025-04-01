@@ -754,7 +754,7 @@ class MyHandler(blivedm.BaseHandler):
         print(f'[{client.room_id}] [{cur_dt}] {like_count}点赞')
 
     def _on_start_live(self, client: blivedm.BLiveClient, message: web_models.StartLiveMessage):
-        cur_timestamp = message.live_timestamp#单位：秒
+        cur_timestamp = time.time()#单位：秒
         cur_dt = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{cur_dt}] {message.room_id}开始直播，live_id = {message.live_key}')
 
