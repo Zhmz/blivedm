@@ -22,7 +22,7 @@ import requests
 
 import psycopg2
 
-from blive_const import TEST_ROOM_IDS, SESSDATA
+from blive_const import TEST_ROOM_IDS, SESSDATA, BUVID3
 from select_sql_tools import query_live_start_end_time_by_live_date, query_pay_count_by_room_and_live_start_end_time
 from sql_const import *
 
@@ -125,6 +125,7 @@ async def main():
 def init_session():
     cookies = http.cookies.SimpleCookie()
     cookies['SESSDATA'] = SESSDATA
+    cookies['buvid3'] = BUVID3
     cookies['SESSDATA']['domain'] = 'bilibili.com'
 
     global session
