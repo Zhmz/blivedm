@@ -466,10 +466,11 @@ class MyHandler(blivedm.BaseHandler):
             self.combo_send_commit_pool = copy.deepcopy(self.combo_send_pool)
             self.combo_send_pool = []
 
-            print("insert combo_send successfully,count = "+str(self.combo_send_db_index)+", pool count = "+str(len(self.combo_send_commit_pool)))
+            # #礼物连击有报错，会导致数据库操作中断，先不存这个combosend，对其他数据没有影响
+            # print("insert combo_send successfully,count = "+str(self.combo_send_db_index)+", pool count = "+str(len(self.combo_send_commit_pool)))
             self.combo_send_db_index = 0
-            cursor.executemany(insert_combo_send_table_sql, self.combo_send_commit_pool)
-            connection.commit()
+            # cursor.executemany(insert_combo_send_table_sql, self.combo_send_commit_pool)
+            # connection.commit()
 
     def _on_buy_guard(self, client: blivedm.BLiveClient, message: web_models.GuardBuyMessage):
         seconds = message.start_time

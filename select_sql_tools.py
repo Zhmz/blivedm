@@ -288,7 +288,7 @@ if __name__ == "__main__":
     start_time_str, end_time_str, execution_time = query_live_start_end_time_by_live_date(
         conn_params=db_config,
         room_id=room_id,
-        live_date_str='2025-04-01',
+        live_date_str='2025-04-03',
     )
 
     print(f"start_time_str = {start_time_str}, end_time_str = {end_time_str}, execution_time = {execution_time:.2f}ms")
