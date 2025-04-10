@@ -890,7 +890,6 @@ class MyHandler(blivedm.BaseHandler):
         except KeyError as e:
             print(f"响应数据格式异常，缺失字段: {str(e)}")
 
-
         # 从0、2变为1是开始直播，从1变为0、2是结束直播
         live_action = '无'
         if self.temp_live_status_minute_dict[room_id] == 0 or self.temp_live_status_minute_dict[room_id] == 2:
@@ -899,34 +898,6 @@ class MyHandler(blivedm.BaseHandler):
         elif self.temp_live_status_minute_dict[room_id] == 1:
             if data['live_status'] == 0 or data['live_status'] == 2:
                 live_action = '结束直播'
-                # 下播时将看过和点赞存入数据库
-                self.save_watch_change_to_db(room_id, cur_timestamp, dt)
-                self.save_like_info_update_to_db(room_id, cur_timestamp, dt)
-
-                # 需要将场次表各个信息的数据存入DB
-                watch_change_count = 0
-                if room_id in self.watch_change_dict.keys():
-                    watch_change_count = self.watch_change_dict[room_id]
-                like_info_update_count = 0
-                if room_id in self.like_info_update_dict.keys():
-                    like_info_update_count = self.like_info_update_dict[room_id]
-
-                # 先要找最近一次的开始直播的时间
-                pay_count = 0
-                total_income = 0
-                pay_result = {}
-                execution_time = 0
-                cur_day = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d')
-                start_time_str, end_time_str, execution_time = query_live_start_end_time_by_live_date(db_config,room_id,cur_day)
-                cur_day_date = datetime.strptime(cur_day, '%Y-%m-%d')
-                start_time_date = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M:%S')
-                if cur_day_date.date() == start_time_date.date():
-                    pay_count, total_income, pay_result, execution_time = query_pay_count_by_room_and_live_start_end_time(db_config, room_id, start_time_str, dt)
-
-                # 开始存
-                self.save_income_live_to_db(room_id, start_time_str, dt, pay_count, total_income,
-                                            watch_change_count, like_info_update_count, cur_timestamp, dt)
-
 
         self.temp_live_status_minute_dict[room_id] = data['live_status']
 
@@ -941,6 +912,56 @@ class MyHandler(blivedm.BaseHandler):
         cursor.execute(insert_live_status_minute_table_sql, params)
         connection.commit()
         print(f"[{room_id}] [{dt}] 存入DB，直播状态：{data['live_status']}，直播动作：{live_action}")
+
+        # 需要上面分钟的直播状态存入db后，才能取出来最新的数据
+        # 从0、2变为1是开始直播，从1变为0、2是结束直播
+        if self.temp_live_status_minute_dict[room_id] == 0 or self.temp_live_status_minute_dict[room_id] == 2:
+            if data['live_status'] == 1:
+                live_action = '开始直播'
+        elif self.temp_live_status_minute_dict[room_id] == 1:
+            if data['live_status'] == 0 or data['live_status'] == 2:
+                live_action = '结束直播'
+                # 下播时将看过和点赞存入数据库
+                self.save_watch_change_to_db(room_id, cur_timestamp, dt)
+                self.save_like_info_update_to_db(room_id, cur_timestamp, dt)
+
+                # 需要将场次表各个信息的数据存入场次表DB
+                watch_change_count = 0
+                if room_id in self.watch_change_dict.keys():
+                    watch_change_count = self.watch_change_dict[room_id]
+                like_info_update_count = 0
+                if room_id in self.like_info_update_dict.keys():
+                    like_info_update_count = self.like_info_update_dict[room_id]
+
+                # 先要找最近一次的开始直播的时间
+                pay_count = 0
+                total_income = 0
+                cur_day = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d')
+                cur_day_zero_time = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+                pair_list, execution_time = \
+                    query_live_start_end_time_by_live_date(db_config, room_id, cur_day, date_is_start_live_date=False)
+
+                # 在pairlist里面找最新的pair再取出 start_time
+                if len(pair_list) > 0:
+                    latest_pair = pair_list[-1]
+                    if 'start_time_str' in latest_pair.keys():
+                        start_live_time_str = latest_pair['start_time_str']
+                    else:
+                        # 取出当天的0点时间
+                        start_live_time_str = cur_day_zero_time
+                else:
+                    # 取出当天的0点时间
+                    start_live_time_str = cur_day_zero_time
+
+                cur_day_date = datetime.strptime(cur_day, '%Y-%m-%d')
+                start_time_time = datetime.strptime(start_live_time_str, '%Y-%m-%d %H:%M:%S')
+                if cur_day_date.date() == start_time_time.date():
+                    pay_count, total_income, pay_result, execution_time = \
+                        query_pay_count_by_room_and_live_start_end_time(db_config, room_id, start_live_time_str, dt)
+
+                # 开始存
+                self.save_income_live_to_db(room_id, start_live_time_str, dt, pay_count, total_income,
+                                            watch_change_count, like_info_update_count, cur_timestamp, dt)
 
     def save_watch_change_to_db(self, room_id, seconds, dt):
         if room_id not in self.watch_change_dict.keys():

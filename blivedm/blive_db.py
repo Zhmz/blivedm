@@ -18,7 +18,7 @@ connection = psycopg2.connect(**db_config)
 cursor = connection.cursor()
 
 #sql语句，建表
-sql ="""select * from danmu_count_minute_table"""
+sql ="""select * from live_status_minute_table WHERE room_id = '22603245' AND (live_action = '开始直播' or live_action = '结束直播')"""
 #sql ="""select * from live_status_minute_table WHERE room_id = '30655374' and (live_action = '开始直播' or live_action = '结束直播')"""
 #sql ="""DROP table income_live_table"""
 """基础表"""
@@ -30,7 +30,7 @@ sql ="""select * from danmu_count_minute_table"""
 """场次表"""
 # income_live_table
 """查询条件"""
-# WHERE room_id = '22603245'
+# WHERE room_id = '22603245' AND (live_action = '开始直播' or live_action = '结束直播')
 # 动态生成 SQL
 
 # 执行语句
