@@ -333,9 +333,9 @@ if __name__ == "__main__":
     # print(f"总付费次数：{pay_count}，总营收：{total_income}元，总耗时：{execution_time:.2f}ms")
 
     # 按某天日期查询上下播具体时间
-    room_id = "22603245"
+    room_id = "21652717"
     is_start_live_date = False
-    live_date_str = '2025-04-05'
+    live_date_str = '2025-04-10'
     pair_list, execution_time = query_live_start_end_time_by_live_date(
         conn_params=db_config,
         room_id=room_id,

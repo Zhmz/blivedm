@@ -254,6 +254,9 @@ class MyHandler(blivedm.BaseHandler):
     # 每分钟更新直播状态
     temp_live_status_minute_dict = {}
 
+    """未开播的DB屏蔽"""
+    # 每个直播间对应一个bool值
+    is_in_live_symbol_dict = {}
 
     def _on_heartbeat(self, client: blivedm.BLiveClient, message: web_models.HeartbeatMessage):
         print(f'[{client.room_id}] 心跳')
@@ -328,7 +331,7 @@ class MyHandler(blivedm.BaseHandler):
         if cur_minute == self.to_save_minute_danmu_count_minute_dict[client.room_id]:
             # 在同一分钟内不断自增
             self.temp_danmu_count_minute_dict[client.room_id] += 1
-        print(f'[{client.room_id}] [{dt}] 当前分钟已累计弹幕数：{self.temp_danmu_count_minute_dict[client.room_id]}')
+        # print(f'[{client.room_id}] [{dt}] 当前分钟已累计弹幕数：{self.temp_danmu_count_minute_dict[client.room_id]}')
 
     def _on_gift(self, client: blivedm.BLiveClient, message: web_models.GiftMessage):
         # gift的时间戳是秒
@@ -402,6 +405,12 @@ class MyHandler(blivedm.BaseHandler):
         print(f'[{room_id}] 当次收入：{current_income}')
 
     def save_income_minute_to_db(self, room_id):
+        # 判断当前房间是否处于开播状态
+        if str(room_id) not in self.is_in_live_symbol_dict.keys():
+            return
+        if not self.is_in_live_symbol_dict[str(room_id)]:
+            return
+
         # 需要算出待存的秒级时间戳
         to_save_second = self.to_save_minute_income_minute_dict[room_id] * 60
         to_save_datetime = datetime.fromtimestamp(to_save_second).strftime('%Y-%m-%d %H:%M:%S')
@@ -417,6 +426,12 @@ class MyHandler(blivedm.BaseHandler):
         print(f'[{room_id}] [{to_save_datetime}] 存入DB，累计营收：{self.temp_income_minute_dict[room_id]}')
 
     def save_danmu_count_minute_to_db(self, room_id):
+        # 判断当前房间是否处于开播状态
+        if str(room_id) not in self.is_in_live_symbol_dict.keys():
+            return
+        if not self.is_in_live_symbol_dict[str(room_id)]:
+            return
+
         # 需要算出待存的秒级时间戳
         to_save_second = self.to_save_minute_danmu_count_minute_dict[room_id] * 60
         to_save_datetime = datetime.fromtimestamp(to_save_second).strftime('%Y-%m-%d %H:%M:%S')
@@ -603,6 +618,12 @@ class MyHandler(blivedm.BaseHandler):
         self.accumulate_income_minute(client.room_id, seconds, current_income)
 
     def _on_interact_word(self, client: blivedm.BLiveClient, message: web_models.InteractWordMessage):
+        # 判断当前房间是否处于开播状态
+        if str(client.room_id) not in self.is_in_live_symbol_dict.keys():
+            return
+        if not self.is_in_live_symbol_dict[str(client.room_id)]:
+            return
+
         seconds = message.timestamp
         dt = datetime.fromtimestamp(seconds).strftime('%Y-%m-%d %H:%M:%S')
 
@@ -698,6 +719,12 @@ class MyHandler(blivedm.BaseHandler):
                 self.temp_interact_word_count_minute_dict[client.room_id] += 1
 
     def save_enter_room_count_minute_to_db(self, room_id):
+        # 判断当前房间是否处于开播状态
+        if str(room_id) not in self.is_in_live_symbol_dict.keys():
+            return
+        if not self.is_in_live_symbol_dict[str(room_id)]:
+            return
+
         # 需要算出待存的秒级时间戳
         to_save_second = self.to_save_minute_enter_room_count_minute_dict[room_id] * 60
         to_save_datetime = datetime.fromtimestamp(to_save_second).strftime('%Y-%m-%d %H:%M:%S')
@@ -714,6 +741,12 @@ class MyHandler(blivedm.BaseHandler):
 
 
     def save_interact_word_count_minute_to_db(self, room_id):
+        # 判断当前房间是否处于开播状态
+        if str(room_id) not in self.is_in_live_symbol_dict.keys():
+            return
+        if not self.is_in_live_symbol_dict[str(room_id)]:
+            return
+
         # 需要算出待存的秒级时间戳
         to_save_second = self.to_save_minute_interact_word_count_minute_dict[room_id] * 60
         to_save_datetime = datetime.fromtimestamp(to_save_second).strftime('%Y-%m-%d %H:%M:%S')
@@ -727,7 +760,6 @@ class MyHandler(blivedm.BaseHandler):
         cursor.execute(insert_interact_word_count_minute_table_sql, params)
         connection.commit()
         print(f'[{room_id}] [{to_save_datetime}] 存入DB，互动次数：{self.temp_interact_word_count_minute_dict[room_id]}')
-
 
 
     def _on_watch_change(self, client: blivedm.BLiveClient, message: web_models.WatchChangeMessage):
@@ -760,6 +792,12 @@ class MyHandler(blivedm.BaseHandler):
         cur_dt = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{client.room_id}] [{cur_dt}] {message.room_id}开始直播，live_id = {message.live_key}')
 
+        # 如果字典没有这个房间id的键
+        if str(message.room_id) not in self.is_in_live_symbol_dict.keys():
+            self.is_in_live_symbol_dict[str(message.room_id)] = True
+        # 设置正在直播的标志位
+        self.is_in_live_symbol_dict[str(message.room_id)] = True
+
     def _on_online_rank_count(self, client: blivedm.BLiveClient, message: web_models.OnlineRankCountMessage):
         cur_timestamp = int(round(time.time()))#单位：秒
         cur_dt = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d %H:%M:%S')
@@ -779,37 +817,7 @@ class MyHandler(blivedm.BaseHandler):
                 self.save_danmu_count_minute_to_db(client.room_id)
 
                 # 每分钟获取直播状态
-                self.get_live_status(client.room_id,cur_minute*60)
-
-                # # 测试：看过和点赞先放在这每分钟存（和整分钟错开）
-                # self.save_watch_change_to_db(client.room_id, cur_timestamp, cur_dt)
-                # self.save_like_info_update_to_db(client.room_id, cur_timestamp, cur_dt)
-
-                # # 测试：当前直播场次到当前时刻的营收数据
-                # # 需要将场次表各个信息的数据存入DB
-                # room_id = client.room_id
-                # dt = cur_dt
-                # watch_change_count = 0
-                # if room_id in self.watch_change_dict.keys():
-                #     watch_change_count = self.watch_change_dict[room_id]
-                # like_info_update_count = 0
-                # if room_id in self.like_info_update_dict.keys():
-                #     like_info_update_count = self.like_info_update_dict[room_id]
-                # 
-                # # 先要找最近一次的开始直播的时间
-                # pay_count = 0
-                # total_income = 0
-                # pay_result = {}
-                # execution_time = 0
-                # cur_day = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d')
-                # start_time_str, end_time_str, execution_time = query_live_start_end_time_by_live_date(db_config,room_id,cur_day)
-                # cur_day_date = datetime.strptime(cur_day, '%Y-%m-%d')
-                # start_time_date = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M:%S')
-                # if cur_day_date.date() == start_time_date.date():
-                #     pay_count, total_income, pay_result, execution_time = query_pay_count_by_room_and_live_start_end_time(db_config, room_id, start_time_str, dt)
-                # 
-                # self.save_income_live_to_db(room_id, start_time_str, dt, pay_count, total_income,
-                #                             watch_change_count, like_info_update_count, cur_timestamp, dt)
+                self.get_live_status(client.room_id, cur_minute*60)
 
             # 更新记录分钟和缓存人数
             self.temp_online_rank_count_minute_dict[client.room_id] = message.count
@@ -828,6 +836,12 @@ class MyHandler(blivedm.BaseHandler):
         print(f'[{client.room_id}] [{cur_dt}] 高能榜人数：{count}')
 
     def save_online_rank_count_minute_to_db(self, room_id):
+        # 判断当前房间是否处于开播状态
+        if str(room_id) not in self.is_in_live_symbol_dict.keys():
+            return
+        if not self.is_in_live_symbol_dict[str(room_id)]:
+            return
+
         # 需要算出待存的秒级时间戳
         to_save_second = self.to_save_minute_online_rank_count_minute_dict[room_id] * 60
         to_save_datetime = datetime.fromtimestamp(to_save_second).strftime('%Y-%m-%d %H:%M:%S')
@@ -899,7 +913,19 @@ class MyHandler(blivedm.BaseHandler):
             if data['live_status'] == 0 or data['live_status'] == 2:
                 live_action = '结束直播'
 
+                # 结束直播，需要将标志位置回false
+                # 如果字典没有这个房间id的键
+                if str(room_id) not in self.is_in_live_symbol_dict.keys():
+                    self.is_in_live_symbol_dict[str(room_id)] = False
+                # 设置正在直播的标志位
+                self.is_in_live_symbol_dict[str(room_id)] = False
+
         self.temp_live_status_minute_dict[room_id] = data['live_status']
+
+        # 更新状态后，如果在直播，需要把字典里的值设置为true
+        if str(room_id) not in self.is_in_live_symbol_dict.keys():
+            self.is_in_live_symbol_dict[str(room_id)] = True
+        self.is_in_live_symbol_dict[str(room_id)] = True
 
         params = {'room_id': room_id,
                   'live_status': data['live_status'],
