@@ -193,6 +193,41 @@ def query_pay_count_by_room_and_live_start_end_time(conn_params, room_id, in_sta
     return total_count, total_income, result, elapsed_ms
 
 
+def query_live_start_time_by_end_time(conn_params, room_id, end_time_str):
+    start_time_str = ''
+    end_time_format = datetime.strptime(end_time_str, "%Y-%m-%d %H:%M:%S")
+
+    execution_start_time = time.time()
+    try:
+        # 创建数据库连接
+        with (psycopg2.connect(**conn_params) as conn):
+            with conn.cursor(cursor_factory=DictCursor) as cursor:
+                query = sql.SQL("""
+                                SELECT * FROM live_status_minute_table
+                                WHERE room_id = %s
+                                AND datetime >= %s - INTERVAL '24 HOURS'
+                                AND datetime < %s
+                                AND live_action = '开始直播'
+                                ORDER BY datetime DESC
+                                LIMIT 1
+                                """)
+                cursor.execute(query, (str(room_id), end_time_format, end_time_format))
+                result_rows = cursor.fetchall()
+                if len(result_rows) > 0:
+                    start_minute_data = result_rows[0]# 只返回一条数据
+                    start_time_str = datetime.fromtimestamp(start_minute_data['timestamp']).strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    cur_day_zero_time = end_time_format.replace(hour=0, minute=0, second=0, microsecond=0)
+                    start_time_str = cur_day_zero_time.strftime('%Y-%m-%d %H:%M:%S')
+                elapsed_ms = (time.time() - execution_start_time) * 1000  # 转为毫秒
+    except psycopg2.Error as e:
+        print(f"数据库操作失败: {e}")
+        return '', 0
+    finally:
+        if conn:
+            conn.close()
+    return start_time_str, elapsed_ms
+
 # 根据某天日期查询当日直播场次起止时间
 # date_is_start_live_date 传入的日期是开播时间所在的日期
 def query_live_start_end_time_by_live_date(conn_params, room_id, live_date_str, date_is_start_live_date=False):
@@ -210,7 +245,6 @@ def query_live_start_end_time_by_live_date(conn_params, room_id, live_date_str, 
         # 创建数据库连接
         with (psycopg2.connect(**conn_params) as conn):
             with conn.cursor(cursor_factory=DictCursor) as cursor:
-                elapsed_ms = (time.time() - start_time) * 1000  # 转为毫秒
 
                 if isinstance(live_date_str, str):
                     live_date_format = datetime.strptime(live_date_str, "%Y-%m-%d")
@@ -281,7 +315,8 @@ def query_live_start_end_time_by_live_date(conn_params, room_id, live_date_str, 
                                 temp_live_time_pair['start_time_str'] = last_start_time_str
                                 to_append_pair = copy.deepcopy(temp_live_time_pair)
                                 result_time_pair_list.append(to_append_pair)
-
+                
+                elapsed_ms = (time.time() - start_time) * 1000  # 转为毫秒
     except psycopg2.Error as e:
         print(f"数据库操作失败: {e}")
         return result_time_pair_list, 0
@@ -332,43 +367,73 @@ if __name__ == "__main__":
     #         print(row)
     # print(f"总付费次数：{pay_count}，总营收：{total_income}元，总耗时：{execution_time:.2f}ms")
 
-    # 按某天日期查询上下播具体时间
-    room_id = "21652717"
-    is_start_live_date = False
-    live_date_str = '2025-04-10'
-    pair_list, execution_time = query_live_start_end_time_by_live_date(
+    # # 按某天日期查询上下播具体时间
+    # room_id = "22603245"
+    # is_start_live_date = False
+    # live_date_str = '2025-04-10'
+    # pair_list, execution_time = query_live_start_end_time_by_live_date(
+    #     conn_params=db_config,
+    #     room_id=room_id,
+    #     live_date_str=live_date_str,
+    #     date_is_start_live_date=is_start_live_date
+    # )
+    # 
+    # print(f"execution_time = {execution_time:.2f}ms")
+    # title_str = "开" if is_start_live_date else "关"
+    # title_str += f"播日期为 {live_date_str} 的直播共 {len(pair_list)} 场"
+    # if len(pair_list) > 0:
+    #     title_str += "，时间如下："
+    # print(title_str)
+    # for i in range(len(pair_list)):
+    #     pair = pair_list[i]
+    #     start_time = pair['start_time_str']
+    #     end_time = pair['end_time_str']
+    #     print(f"第 {i + 1} 场直播：开始时间 = {start_time}, 结束时间 = {end_time}")
+    # 
+    #     # 按场次检索付费次数
+    #     pay_count, total_income, pay_result, execution_time = query_pay_count_by_room_and_live_start_end_time(
+    #         conn_params=db_config,
+    #         room_id=room_id,
+    #         # in_start_time='2025-03-29 10:44:00',
+    #         # in_end_time='2025-03-29 14:13:00'
+    #         # in_start_time=1743216240*1000,
+    #         # in_end_time=1743228780*1000
+    #         in_start_time=start_time,
+    #         in_end_time=end_time
+    #     )
+    # 
+    #     # for table, rows in pay_result.items():
+    #     #     print(f"表 {table} 数据：")
+    #     #     for row in rows:
+    #     #         print(row)
+    #     print(f"总付费次数：{pay_count}，总营收：{total_income}元，总耗时：{execution_time:.2f}ms")
+
+
+    # # 按场次检索付费次数
+    # room_id = "10055155"
+    # pay_count, total_income, pay_result, execution_time = query_pay_count_by_room_and_live_start_end_time(
+    #     conn_params=db_config,
+    #     room_id=room_id,
+    #     in_start_time='2025-04-11 18:00:00',
+    #     in_end_time='2025-04-14 00:00:00'
+    #     # in_start_time=1743216240*1000,
+    #     # in_end_time=1743228780*1000
+    #     # in_start_time=start_time,
+    #     # in_end_time=end_time
+    # )
+    # 
+    # for table, rows in pay_result.items():
+    #     print(f"表 {table} 数据：")
+    #     for row in rows:
+    #         print(row)
+    # print(f"总付费次数：{pay_count}，总营收：{total_income}元，总耗时：{execution_time:.2f}ms")
+
+    # 给一个时间找最接近的开播时间
+    room_id = "22992234"
+    start_time_str, execution_time = query_live_start_time_by_end_time(
         conn_params=db_config,
         room_id=room_id,
-        live_date_str=live_date_str,
-        date_is_start_live_date=is_start_live_date
+        end_time_str='2025-04-14 14:48:00'
     )
 
-    print(f"execution_time = {execution_time:.2f}ms")
-    title_str = "开" if is_start_live_date else "关"
-    title_str += f"播日期为 {live_date_str} 的直播共 {len(pair_list)} 场"
-    if len(pair_list) > 0:
-        title_str += "，时间如下："
-    print(title_str)
-    for i in range(len(pair_list)):
-        pair = pair_list[i]
-        start_time = pair['start_time_str']
-        end_time = pair['end_time_str']
-        print(f"第 {i + 1} 场直播：开始时间 = {start_time}, 结束时间 = {end_time}")
-
-        # 按场次检索付费次数
-        pay_count, total_income, pay_result, execution_time = query_pay_count_by_room_and_live_start_end_time(
-            conn_params=db_config,
-            room_id=room_id,
-            # in_start_time='2025-03-29 10:44:00',
-            # in_end_time='2025-03-29 14:13:00'
-            # in_start_time=1743216240*1000,
-            # in_end_time=1743228780*1000
-            in_start_time=start_time,
-            in_end_time=end_time
-        )
-
-        # for table, rows in pay_result.items():
-        #     print(f"表 {table} 数据：")
-        #     for row in rows:
-        #         print(row)
-        print(f"总付费次数：{pay_count}，总营收：{total_income}元，总耗时：{execution_time:.2f}ms")
+    print(f"上一次开播时间：{start_time_str}，总耗时：{execution_time:.2f}ms")

@@ -23,7 +23,8 @@ import requests
 import psycopg2
 
 from blive_const import TEST_ROOM_IDS, SESSDATA, BUVID3
-from select_sql_tools import query_live_start_end_time_by_live_date, query_pay_count_by_room_and_live_start_end_time
+from select_sql_tools import query_live_start_end_time_by_live_date, query_pay_count_by_room_and_live_start_end_time, \
+    query_live_start_time_by_end_time
 from sql_const import *
 
 
@@ -959,31 +960,18 @@ class MyHandler(blivedm.BaseHandler):
                 if room_id in self.like_info_update_dict.keys():
                     like_info_update_count = self.like_info_update_dict[room_id]
 
-                # 先要找最近一次的开始直播的时间
-                pay_count = 0
-                total_income = 0
-                cur_day = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d')
-                cur_day_zero_time = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-                pair_list, execution_time = \
-                    query_live_start_end_time_by_live_date(db_config, room_id, cur_day, date_is_start_live_date=False)
+                # 上面的结束直播的状态可能没结束
+                # 需要根据当前结束直播的时间找到最近的开始直播的时间
+                # 就是上一个“开始直播”的时间点
+                start_live_time_str = query_live_start_time_by_end_time(db_config, room_id, dt)
 
-                # 在pairlist里面找最新的pair再取出 start_time
-                if len(pair_list) > 0:
-                    latest_pair = pair_list[-1]
-                    if 'start_time_str' in latest_pair.keys():
-                        start_live_time_str = latest_pair['start_time_str']
-                    else:
-                        # 取出当天的0点时间
-                        start_live_time_str = cur_day_zero_time
-                else:
-                    # 取出当天的0点时间
-                    start_live_time_str = cur_day_zero_time
-
-                cur_day_date = datetime.strptime(cur_day, '%Y-%m-%d')
-                start_time_time = datetime.strptime(start_live_time_str, '%Y-%m-%d %H:%M:%S')
-                if cur_day_date.date() == start_time_time.date():
-                    pay_count, total_income, pay_result, execution_time = \
-                        query_pay_count_by_room_and_live_start_end_time(db_config, room_id, start_live_time_str, dt)
+                # 存在跨天直播，这个条件不能加了
+                # cur_day = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d')
+                # cur_day_date = datetime.strptime(cur_day, '%Y-%m-%d')
+                # start_time_format = datetime.strptime(start_live_time_str, '%Y-%m-%d %H:%M:%S')
+                # if cur_day_date.date() == start_time_format.date():
+                pay_count, total_income, pay_result, execution_time = \
+                    query_pay_count_by_room_and_live_start_end_time(db_config, room_id, start_live_time_str, dt)
 
                 # 开始存
                 self.save_income_live_to_db(room_id, start_live_time_str, dt, pay_count, total_income,
