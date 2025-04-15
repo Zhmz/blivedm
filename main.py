@@ -820,6 +820,15 @@ class MyHandler(blivedm.BaseHandler):
                 # 每分钟获取直播状态
                 self.get_live_status(client.room_id, cur_minute*60)
 
+                # # 测试代码
+                # dt = datetime.fromtimestamp(cur_minute*60).strftime('%Y-%m-%d %H:%M:%S')
+                # start_live_time_str, temp_execution_time = query_live_start_time_by_end_time(db_config, client.room_id, dt)
+                # pay_count, total_income, pay_result, execution_time = \
+                #     query_pay_count_by_room_and_live_start_end_time(db_config, client.room_id, start_live_time_str, dt)
+                # self.save_income_live_to_db(client.room_id, start_live_time_str, dt, pay_count, total_income,
+                #                             0, 0, cur_timestamp, dt)
+
+
             # 更新记录分钟和缓存人数
             self.temp_online_rank_count_minute_dict[client.room_id] = message.count
             self.to_save_minute_online_rank_count_minute_dict[client.room_id] = cur_minute
@@ -963,7 +972,7 @@ class MyHandler(blivedm.BaseHandler):
                 # 上面的结束直播的状态可能没结束
                 # 需要根据当前结束直播的时间找到最近的开始直播的时间
                 # 就是上一个“开始直播”的时间点
-                start_live_time_str = query_live_start_time_by_end_time(db_config, room_id, dt)
+                start_live_time_str, temp_execution_time = query_live_start_time_by_end_time(db_config, room_id, dt)
 
                 # 存在跨天直播，这个条件不能加了
                 # cur_day = datetime.fromtimestamp(cur_timestamp).strftime('%Y-%m-%d')
