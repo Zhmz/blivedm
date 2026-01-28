@@ -12,8 +12,14 @@ __all__ = (
     'GiftMessage',
     'ComboSendMessage',
     'GuardBuyMessage',
+    'UserToastV2Message',
     'SuperChatMessage',
     'SuperChatDeleteMessage',
+    'InteractWordV2Message',
+    'WatchChangeMessage',
+    'LikeInfoUpdateMessage',
+    'StartLiveMessage',
+    'OnlineRankCountMessage',
 )
 
 
