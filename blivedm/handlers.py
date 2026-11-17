@@ -86,6 +86,11 @@ class BaseHandler(HandlerInterface):
         message.is_mirror = True
         return self._on_open_live_danmaku(client, message)
 
+    def __send_gift_v2_callback(self, client: ws_base.WebSocketClientBase, command: dict):
+        # 一条 SEND_GIFT_V2 可能带多个礼物，逐个交给 _on_gift，与 SEND_GIFT 走同一处理逻辑
+        for message in web_models.GiftMessage.batch_from_command_v2(command['data']):
+            self._on_gift(client, message)
+
     _CMD_CALLBACK_DICT: Dict[
         str,
         Optional[Callable[
@@ -103,6 +108,8 @@ class BaseHandler(HandlerInterface):
         'DANMU_MSG_MIRROR': __danmu_msg_mirror_callback,
         # 礼物
         'SEND_GIFT': _make_msg_callback('_on_gift', web_models.GiftMessage),
+        # 礼物（B站 2026-07 起灰度、2026-09 起全量的新协议，protobuf 编码；不接会导致礼物全部丢失）
+        'SEND_GIFT_V2': __send_gift_v2_callback,
         # 礼物连击
         'COMBO_SEND': _make_msg_callback('_on_combo_send', web_models.ComboSendMessage),
         # 上舰

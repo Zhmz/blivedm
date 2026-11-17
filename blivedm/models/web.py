@@ -346,6 +346,40 @@ class GiftMessage:
             medal_ruid=medal_ruid,
         )
 
+    @classmethod
+    def batch_from_command_v2(cls, data: dict) -> List['GiftMessage']:
+        """
+        解析 SEND_GIFT_V2（data['pb'] 为 base64 的 protobuf）。
+        一条 V2 消息可能包含多个礼物，转换成多条与 SEND_GIFT 字段一致的 GiftMessage。
+        """
+        proto = pb.SendGiftBroadcast.loads(base64.b64decode(data['pb']))
+        medal_info = proto.medal_info
+        messages = []
+        for gift in proto.gift_list:
+            messages.append(cls(
+                gift_name=gift.gift_name,
+                num=gift.num,
+                uname=proto.uname,
+                face=proto.face,
+                guard_level=proto.guard_level,
+                uid=proto.uid,
+                timestamp=gift.timestamp,
+                gift_id=gift.gift_id,
+                gift_type=gift.gift_type,
+                gift_img_basic=gift.gift_info.img_basic,
+                action=gift.action,
+                price=gift.price,
+                rnd=gift.rnd,
+                coin_type=gift.coin_type,
+                total_coin=gift.total_coin,
+                tid=gift.tid,
+                medal_level=medal_info.medal_level,
+                medal_name=medal_info.medal_name,
+                medal_room_id=medal_info.anchor_roomid,
+                medal_ruid=medal_info.target_id,
+            ))
+        return messages
+
 @dataclasses.dataclass
 class ComboSendMessage:
     """
